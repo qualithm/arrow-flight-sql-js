@@ -1,82 +1,104 @@
-# Code Guidelines
+# TypeScript Code Guidelines
 
 ## General
 
 - Use TypeScript with strict mode
 - British spelling in user-facing strings (e.g. "unauthorised", "colour")
 - Lowercase error messages with no trailing punctuation
+- Run linting and type checking before committing
+
+## When Code Changes
+
+Any code change should include review of:
+
+- **Tests** - update existing tests, add new tests for new behaviour
+- **Types** - update type definitions if data shapes change
+- **Documentation** - update comments if public API changes
+- **Error messages** - ensure they remain accurate and helpful
+- **Configuration** - update env vars or config files if affected
+- **Dependencies** - check for unused deps after removing code
+
+Run before committing:
+
+```bash
+bun run lint
+bun run typecheck
+bun test
+```
 
 ## Imports
 
-**Order:** email → constants → core libs → utils → middleware → types
+**Order:** framework → external libs → workspace packages → local modules → types
 
 ```ts
-import { Invite } from "../email/Invite"
-import { isMemberRole, rateLimits } from "../lib/constants"
-import http from "../lib/http"
-import pg from "../lib/pg"
-import tc from "../lib/tc"
-import { badRequest, forbidden, ok, parseUUID, type Rows } from "../lib/utils"
-import { withRateLimit, withSession, withWorkspaceRoles } from "../middleware"
-import type { Role } from "../type/app"
-import type { HttpResponse } from "../type/http"
+import { useState, useCallback } from "react"
+
+import { z } from "zod"
+
+import { httpClient } from "@workspace/shared"
+
+import { parseId, formatDate } from "../lib/utils"
+import type { User, Session } from "../types"
 ```
 
 **Rules:**
 
-- No duplicate imports
+- Group imports by origin with blank lines between groups
+- Use `import type { Y }` for type-only imports
 - Use `import { x, type Y }` for mixed imports
-- Use `import type { Y }` for types-only
+- No duplicate imports
+- Prefer explicit imports over `* as`
+
+## File Structure
+
+| Path     | Purpose                       |
+| -------- | ----------------------------- |
+| `lib/`   | Utilities, constants, helpers |
+| `types/` | TypeScript type definitions   |
+| `test/`  | Test files                    |
 
 ## Naming Conventions
 
-| Type         | Pattern        | Example                        |
-| ------------ | -------------- | ------------------------------ |
-| Context      | `ctx{Name}`    | `ctxSession`, `ctxWorkspace`   |
-| Path param   | `param{Name}`  | `paramTeamId`, `paramDeviceId` |
-| Query param  | `query{Name}`  | `queryPage`, `queryLimit`      |
-| Body field   | `input{Name}`  | `inputName`, `inputRole`       |
-| Parsed value | `parsed{Name}` | `parsedTeamId`, `parsedName`   |
-| Table alias  | first letter   | `device AS d`                  |
-| Column       | camelCase      | `created_at AS "createdAt"`    |
+| Type             | Pattern                          | Example                               |
+| ---------------- | -------------------------------- | ------------------------------------- |
+| Types/Interfaces | `PascalCase`                     | `UserSession`, `ApiResponse`          |
+| Functions        | `camelCase`                      | `getUser`, `parseToken`               |
+| Constants        | `SCREAMING_SNAKE` or `camelCase` | `MAX_RETRIES`, `defaultConfig`        |
+| Files            | `camelCase`                      | `userService.ts`, `authMiddleware.ts` |
+| Env vars         | `SCREAMING_SNAKE`                | `DATABASE_URL`, `API_SECRET`          |
 
-## Endpoint Files
+## Comments and Documentation
 
-File naming: `src/v1/{verb}{Resource}.ts` — e.g. `getDevices.ts`, `postDevice.ts`
+**Avoid comments that age poorly.** Stale documentation is worse than none.
 
-## Middleware
+**Do not include:**
+
+- Overview/summary docs describing architecture
+- Diagrams showing component relationships
+- Feature lists or "this module provides" enumerations
+- "How to use" guides
+
+**Do include:**
+
+- Brief JSDoc on exported functions describing parameters and return values
+- Implementation comments explaining non-obvious logic
+- `@throws` annotations where applicable
+
+## Error Handling
+
+Thrown errors should be human-readable sentences: sentence case, no trailing punctuation.
 
 ```ts
-http.get(
-  "/v1/resource",
-  withRateLimit(rateLimits.standard), // or rateLimits.sensitive for emails/forms
-  withSession(),
-  withWorkspaceRoles(["owner"]), // if needed
-  async (c) => {
-    /* ... */
-  }
-)
+throw new Error("User not found")
+throw new Error("Failed to parse response")
+throw new Error("Token has expired")
 ```
-
-**Never hardcode rate limits.** Use `rateLimits.standard` or `rateLimits.sensitive`.
-
-## Validation Order
-
-1. Path params → 2. Auth context → 3. Body (`tc`) → 4. Business rules → 5. Database
-
-## Database
-
-| Connection    | Use              |
-| ------------- | ---------------- |
-| `pg.reader()` | reads (replica)  |
-| `pg.writer()` | writes (primary) |
 
 **Rules:**
 
-- Always include `deleted_at IS NULL` on all tables including joins
-- Use `pg.wait()` after writes
-- Use `FOR UPDATE` for atomic operations (role changes, ownership)
-- Use transactions for multi-table writes
+- Use specific error messages with context
+- Prefer throwing `Error` over returning error objects
+- Handle errors at appropriate boundaries
 
 ## Logging
 
@@ -84,17 +106,51 @@ Logs are structured `key=value` format. Use object syntax:
 
 ```ts
 log.info({ event: "server_started", port: 3000 })
-log.error({ event: "db_connection_failed", host: "localhost", error: e })
+log.error({ event: "request_failed", path, error: e })
 ```
 
 **Never use human-readable log strings.**
 
-## Error Handling
+## Testing
 
-Thrown errors should be human-readable sentences: sentence case, no trailing punctuation, specific
-context.
+Place tests alongside source or in a `test/` directory:
 
 ```ts
-throw new Error("Token secret is missing or too short")
-throw new Error("Failed to fetch user info from GitHub")
+import { describe, it, expect } from "bun:test"
+
+describe("parseToken", () => {
+  it("returns null for invalid input", () => {
+    expect(parseToken("invalid")).toBeNull()
+  })
+
+  it("extracts user id from valid token", () => {
+    const result = parseToken(validToken)
+    expect(result?.userId).toBe("123")
+  })
+})
 ```
+
+**Rules:**
+
+- Use descriptive test names
+- Test edge cases and error conditions
+- Prefer unit tests over integration tests where possible
+
+## Type Definitions
+
+```ts
+type UserRole = "owner" | "admin" | "member"
+
+type User = {
+  id: string
+  email: string
+  role: UserRole
+  createdAt: Date
+}
+```
+
+**Rules:**
+
+- Prefer `type` over `interface` for object shapes
+- Use union types for constrained values
+- Export types from dedicated type files
