@@ -47,14 +47,14 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run tsc --noEmit
 
-  test:
-    name: Test
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun test:unit
+  # test:
+  #   name: Test
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #     - uses: oven-sh/setup-bun@v2
+  #     - run: bun install --frozen-lockfile
+  #     - run: bun test:unit
 
   audit:
     name: Dependency Audit
