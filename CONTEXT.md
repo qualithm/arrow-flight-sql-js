@@ -74,15 +74,18 @@ The project structure has been established with placeholder modules:
 
 ## Locked Decisions
 
-| ID  | Decision                                       | Rationale                                                     |
-| --- | ---------------------------------------------- | ------------------------------------------------------------- |
-| L1  | TypeScript-first with full type coverage       | Type safety is critical for a protocol library                |
-| L2  | ESM-only package                               | Modern standards, tree-shaking support                        |
-| L3  | Zero runtime dependencies where possible       | Minimize bundle size, reduce supply chain risk                |
-| L4  | Model API on official Arrow Flight SQL clients | Consistency with ecosystem, proven patterns                   |
-| L5  | Streaming-first design                         | Arrow Flight is inherently streaming; batch is a special case |
-| L6  | Publish as `@qualithm/arrow-flight-sql`        | Scoped package under Qualithm organization                    |
-| L7  | Server-agnostic implementation                 | Must work with any Flight SQL server, not just Qualithm       |
+| ID  | Decision                                       | Rationale                                                      |
+| --- | ---------------------------------------------- | -------------------------------------------------------------- |
+| L1  | TypeScript-first with full type coverage       | Type safety is critical for a protocol library                 |
+| L2  | ESM-only package                               | Modern standards, tree-shaking support                         |
+| L3  | Zero runtime dependencies where possible       | Minimize bundle size, reduce supply chain risk                 |
+| L4  | Model API on official Arrow Flight SQL clients | Consistency with ecosystem, proven patterns                    |
+| L5  | Streaming-first design                         | Arrow Flight is inherently streaming; batch is a special case  |
+| L6  | Publish as `@qualithm/arrow-flight-sql`        | Scoped package under Qualithm organization                     |
+| L7  | Server-agnostic implementation                 | Must work with any Flight SQL server, not just Qualithm        |
+| L8  | Use `@grpc/grpc-js` for gRPC transport         | Mature, well-maintained, Node.js native gRPC implementation    |
+| L9  | Generate types from official .proto files      | Ensures protocol compliance, tracks upstream changes           |
+| L10 | Use `apache-arrow` npm package                 | Official Arrow implementation, battle-tested, full IPC support |
 
 ---
 
@@ -92,9 +95,6 @@ The project structure has been established with placeholder modules:
 
 | ID  | Question                       | Context                                                         |
 | --- | ------------------------------ | --------------------------------------------------------------- |
-| O1  | gRPC library choice            | `@grpc/grpc-js` vs `@connectrpc/connect` vs custom HTTP/2       |
-| O2  | Protobuf approach              | Generate from official .proto files vs hand-written types       |
-| O3  | Arrow library integration      | Use `apache-arrow` npm package vs minimal custom IPC reader     |
 | O4  | Browser support strategy       | gRPC-web proxy required, or HTTP/2 direct where supported       |
 | O5  | Connection pool implementation | Generic pool vs custom implementation for Flight-specific needs |
 

@@ -12,9 +12,14 @@
     "test:integration": "bun test src/__tests__/integration",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
-    "watch": "bun --watch run src/index.ts"
+    "watch": "bun --watch run src/index.ts",
+    "proto:generate": "bun run scripts/generate-proto.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@grpc/grpc-js": "1.14.3",
+    "@grpc/proto-loader": "0.8.0",
+    "apache-arrow": "21.1.0"
+  },
   "overrides": {},
   "devDependencies": {
     "@eslint/js": "9.39.2",
