@@ -42,6 +42,12 @@ We adopt the best patterns from each:
 - Edge runtimes with HTTP/2 support (Cloudflare Workers with custom builds)
 - Browser (where gRPC-web or HTTP/2 is available)
 
+### Relationship to Qualithm Lakehouse
+
+This library is developed as part of the Qualithm ecosystem (tracked in `lakehouse/CONTEXT.md` M4)
+but is designed as a **standalone, general-purpose** Arrow Flight SQL client. The lakehouse is one
+consumer; the library must work with any compliant Flight SQL server.
+
 ---
 
 ## Current Reality
@@ -75,6 +81,8 @@ The project structure has been established with placeholder modules:
 | L3  | Zero runtime dependencies where possible       | Minimize bundle size, reduce supply chain risk                |
 | L4  | Model API on official Arrow Flight SQL clients | Consistency with ecosystem, proven patterns                   |
 | L5  | Streaming-first design                         | Arrow Flight is inherently streaming; batch is a special case |
+| L6  | Publish as `@qualithm/arrow-flight-sql`        | Scoped package under Qualithm organization                    |
+| L7  | Server-agnostic implementation                 | Must work with any Flight SQL server, not just Qualithm       |
 
 ---
 
@@ -150,6 +158,13 @@ The project structure has been established with placeholder modules:
 - [ ] Full test coverage (unit + integration)
 - [ ] Documentation and examples
 - [ ] Performance benchmarks
+
+### M6: npm Publication
+
+- [ ] Pass Flight SQL conformance tests
+- [ ] Verify interop with multiple Flight SQL servers (lakehouse, DuckDB, Dremio)
+- [ ] Publish `@qualithm/arrow-flight-sql` to npm
+- [ ] Full API documentation
 
 ---
 

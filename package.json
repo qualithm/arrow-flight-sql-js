@@ -1,6 +1,6 @@
 {
-  "name": "arrow-flight-sql-js",
-  "private": true,
+  "name": "@qualithm/arrow-flight-sql",
+  "private": false,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
