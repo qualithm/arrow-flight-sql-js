@@ -3,7 +3,7 @@
   "private": false,
   "version": "1.0.0",
   "type": "module",
-  "description": "A standards-compliant Apache Arrow Flight SQL client for JavaScript and TypeScript",
+  "description": "Arrow Flight SQL client for JavaScript.",
   "keywords": [
     "arrow",
     "apache-arrow",

@@ -1,7 +1,6 @@
 # Arrow Flight SQL JS
 
-A standards-compliant [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
-client for JavaScript and TypeScript.
+Arrow Flight SQL client for JavaScript.
 
 > ⚠️ **Status: In Development** – Not yet ready for production use.
 
