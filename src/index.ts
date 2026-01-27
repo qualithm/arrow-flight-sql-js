@@ -16,8 +16,10 @@
  *
  * await client.connect()
  *
- * const result = await client.execute("SELECT * FROM users")
- * // Process result...
+ * const result = await client.query("SELECT * FROM users")
+ * for await (const batch of result.stream()) {
+ *   console.log(batch.numRows)
+ * }
  *
  * await client.close()
  * ```
@@ -25,8 +27,8 @@
  * @packageDocumentation
  */
 
-// Main client export
-export { FlightSqlClient } from "./client"
+// Main client and result classes
+export { FlightSqlClient, PreparedStatement, QueryResult } from "./client"
 
 // Error types
 export {
@@ -40,6 +42,30 @@ export {
   QueryError,
   TimeoutError
 } from "./errors"
+
+// Arrow utilities
+export {
+  collectToTable,
+  getColumnNames,
+  getRowCount,
+  parseFlightData,
+  parseFlightDataStream,
+  parseSchema,
+  tableToObjects,
+  tryParseSchema
+} from "./arrow"
+
+// Protobuf utilities (for advanced users)
+export {
+  encodeCommandGetCatalogs,
+  encodeCommandGetDbSchemas,
+  encodeCommandGetPrimaryKeys,
+  encodeCommandGetTables,
+  encodeCommandGetTableTypes,
+  encodeCommandStatementQuery,
+  encodeCommandStatementUpdate,
+  TypeUrls
+} from "./proto"
 
 // Type exports
 export type {
@@ -67,7 +93,6 @@ export type {
   PreparedStatementResult,
   PrimaryKeyInfo,
   PutResult,
-  QueryResult,
   // Streaming types
   RecordBatchStream,
   // Retry types
@@ -80,5 +105,5 @@ export type {
   UpdateResult
 } from "./types"
 
-// Re-export DescriptorType enum (needed for runtime)
+// Re-export DescriptorType (needed for runtime)
 export { DescriptorType } from "./types"

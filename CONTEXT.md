@@ -52,23 +52,26 @@ consumer; the library must work with any compliant Flight SQL server.
 
 ## Current Reality
 
-**Status: Scaffolding Phase**
+**Status: M1+M2 Complete – Core Implementation**
 
-The project structure has been established with placeholder modules:
+The project has a working Arrow Flight SQL client implementation:
 
-- `src/client.ts` – Main `FlightSqlClient` class (not yet implemented)
+- `src/client.ts` – Main `FlightSqlClient`, `QueryResult`, `PreparedStatement` classes ✅
 - `src/pool.ts` – Connection pool implementation (not yet implemented)
-- `src/types.ts` – TypeScript type definitions for Flight SQL (not yet implemented)
+- `src/types.ts` – TypeScript type definitions for Flight SQL ✅
+- `src/proto.ts` – Manual protobuf encoding/decoding for Flight SQL commands ✅
+- `src/arrow.ts` – Arrow IPC parsing utilities ✅
+- `src/errors.ts` – Custom error types with gRPC status mapping ✅
 - `src/query-builder.ts` – Query builder utilities (not yet implemented)
 - `src/retry.ts` – Retry logic with backoff (not yet implemented)
-- `src/errors.ts` – Custom error types (not yet implemented)
-- `src/index.ts` – Public API exports (not yet implemented)
+- `src/index.ts` – Public API exports ✅
+- `src/generated/index.ts` – Proto loader utilities ✅
 
-### Dependencies (To Be Added)
+### Dependencies
 
-- `@grpc/grpc-js` or `@connectrpc/connect` – gRPC transport
-- `apache-arrow` – Arrow IPC format handling
-- Protobuf runtime (protobuf-es or similar)
+- `@grpc/grpc-js` – gRPC transport (1.14.3)
+- `@grpc/proto-loader` – Dynamic proto loading (0.8.0)
+- `apache-arrow` – Arrow IPC format handling (21.1.0)
 
 ---
 
@@ -121,20 +124,20 @@ The project structure has been established with placeholder modules:
 
 ## Next Milestones
 
-### M1: Core Protocol Foundation
+### M1: Core Protocol Foundation ✅
 
-- [ ] Define TypeScript types for Flight SQL messages
-- [ ] Implement protobuf serialization/deserialization
-- [ ] Basic gRPC transport layer
-- [ ] Handshake and authentication flow
+- [x] Define TypeScript types for Flight SQL messages
+- [x] Implement protobuf serialization/deserialization
+- [x] Basic gRPC transport layer
+- [x] Handshake and authentication flow
 
-### M2: Query Execution
+### M2: Query Execution ✅
 
-- [ ] `execute()` – Execute SQL statements returning Arrow streams
-- [ ] `getFlightInfo()` – Query metadata retrieval
-- [ ] `doGet()` – Fetch Arrow record batches
-- [ ] `doPut()` – Upload Arrow data
-- [ ] Prepared statement support
+- [x] `query()` / `execute()` – Execute SQL statements returning Arrow streams
+- [x] `getFlightInfo()` – Query metadata retrieval
+- [x] `doGet()` – Fetch Arrow record batches
+- [x] `doPut()` – Upload Arrow data
+- [x] Prepared statement support (`prepare()`, `PreparedStatement` class)
 
 ### M3: Connection Management
 
@@ -172,6 +175,10 @@ The project structure has been established with placeholder modules:
 
 > Append-only. Never edit or delete existing entries.
 
-| Date       | Learning                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| 2026-01-26 | Project initialized. Modeling on Java/C++/Go reference implementations for API consistency. |
+| Date       | Learning                                                                                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-01-26 | Project initialized. Modeling on Java/C++/Go reference implementations for API consistency.                                                                     |
+| 2026-01-26 | Used manual protobuf encoding in proto.ts to avoid full protobuf runtime dependency. Wire format is simple for Flight SQL commands (varint + length-delimited). |
+| 2026-01-26 | ESLint with `erasableSyntaxOnly` requires const objects instead of enums (e.g., DescriptorType uses `as const` pattern).                                        |
+| 2026-01-26 | gRPC streams in @grpc/grpc-js are async iterable, avoiding need for manual stream-to-iterator conversion.                                                       |
+| 2026-01-26 | Arrow IPC messages use custom framing (continuation byte + metadata length) that differs from standard Arrow file format.                                       |

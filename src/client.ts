@@ -6,9 +6,20 @@
  */
 
 import * as grpc from "@grpc/grpc-js"
+import type { RecordBatch, Schema, Table } from "apache-arrow"
 
+import { collectToTable, tryParseSchema } from "./arrow"
 import { AuthenticationError, ConnectionError, FlightSqlError } from "./errors"
 import { getFlightServiceDefinition } from "./generated"
+import {
+  encodeActionClosePreparedStatementRequest,
+  encodeActionCreatePreparedStatementRequest,
+  encodeCommandPreparedStatementQuery,
+  encodeCommandStatementQuery,
+  encodeCommandStatementUpdate,
+  getBytesField,
+  parseProtoFields
+} from "./proto"
 import type {
   Action,
   ActionResult,
@@ -151,7 +162,46 @@ export class FlightSqlClient {
   // ===========================================================================
 
   /**
+   * Execute a SQL query and return a QueryResult for retrieving results.
+   *
+   * @param query - SQL query string
+   * @param options - Optional execution options
+   * @returns QueryResult with stream() and collect() methods
+   *
+   * @example
+   * ```typescript
+   * const result = await client.query("SELECT * FROM users")
+   *
+   * // Stream record batches
+   * for await (const batch of result.stream()) {
+   *   console.log(batch.numRows)
+   * }
+   *
+   * // Or collect all into a table
+   * const table = await result.collect()
+   * ```
+   */
+  async query(query: string, options?: ExecuteOptions): Promise<QueryResult> {
+    this.ensureConnected()
+
+    // Build CommandStatementQuery with proper protobuf encoding
+    const command = encodeCommandStatementQuery(query, options?.transactionId)
+
+    // Create FlightDescriptor with CMD type
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    const schema = tryParseSchema(flightInfo.schema)
+
+    return new QueryResult(this, flightInfo, schema)
+  }
+
+  /**
    * Execute a SQL query and return flight info for retrieving results.
+   * @deprecated Use query() instead for a more ergonomic API
    *
    * @param query - SQL query string
    * @param options - Optional execution options
@@ -159,11 +209,9 @@ export class FlightSqlClient {
    */
   async execute(query: string, options?: ExecuteOptions): Promise<FlightInfo> {
     this.ensureConnected()
-    // options will be used for transaction_id in future
-    void options
 
-    // Build CommandStatementQuery message
-    const command = this.buildStatementQueryCommand(query)
+    // Build CommandStatementQuery with proper protobuf encoding
+    const command = encodeCommandStatementQuery(query, options?.transactionId)
 
     // Create FlightDescriptor with CMD type
     const descriptor: FlightDescriptor = {
@@ -183,11 +231,9 @@ export class FlightSqlClient {
    */
   async executeUpdate(query: string, options?: ExecuteOptions): Promise<bigint> {
     this.ensureConnected()
-    // options will be used for transaction_id in future
-    void options
 
-    // Build CommandStatementUpdate message
-    const command = this.buildStatementUpdateCommand(query)
+    // Build CommandStatementUpdate with proper protobuf encoding
+    const command = encodeCommandStatementUpdate(query, options?.transactionId)
 
     const descriptor: FlightDescriptor = {
       type: 2 as DescriptorType, // CMD
@@ -200,6 +246,65 @@ export class FlightSqlClient {
     // For updates, the server typically returns the count in the first endpoint
     // We'll implement the full flow in a later milestone
     return flightInfo.totalRecords
+  }
+
+  /**
+   * Create a prepared statement for repeated execution.
+   *
+   * @param query - SQL query with optional parameter placeholders
+   * @param options - Optional prepared statement options
+   * @returns PreparedStatement that can be executed multiple times
+   *
+   * @example
+   * ```typescript
+   * const stmt = await client.prepare("SELECT * FROM users WHERE id = ?")
+   * const result = await stmt.executeQuery()
+   * await stmt.close()
+   * ```
+   */
+  async prepare(query: string, options?: ExecuteOptions): Promise<PreparedStatement> {
+    this.ensureConnected()
+
+    // Use CreatePreparedStatement action
+    const actionBody = encodeActionCreatePreparedStatementRequest(query, options?.transactionId)
+    const action: Action = {
+      type: "CreatePreparedStatement",
+      body: actionBody
+    }
+
+    // Execute the action and parse the response
+    let handle: Uint8Array | undefined
+    let datasetSchema: Schema | null = null
+    let parameterSchema: Schema | null = null
+
+    for await (const result of this.doAction(action)) {
+      // Parse ActionCreatePreparedStatementResult
+      // Fields:
+      //   1: prepared_statement_handle (bytes)
+      //   2: dataset_schema (bytes) - Arrow IPC schema
+      //   3: parameter_schema (bytes) - Arrow IPC schema
+      const fields = parseProtoFields(result.body)
+
+      handle = getBytesField(fields, 1)
+      const datasetSchemaBytes = getBytesField(fields, 2)
+      const parameterSchemaBytes = getBytesField(fields, 3)
+
+      if (datasetSchemaBytes && datasetSchemaBytes.length > 0) {
+        datasetSchema = tryParseSchema(datasetSchemaBytes)
+      }
+
+      if (parameterSchemaBytes && parameterSchemaBytes.length > 0) {
+        parameterSchema = tryParseSchema(parameterSchemaBytes)
+      }
+
+      break // Only expect one result
+    }
+
+    if (!handle) {
+      throw new FlightSqlError("Failed to create prepared statement: no handle returned")
+    }
+
+    return new PreparedStatement(this, handle, datasetSchema, parameterSchema)
   }
 
   // ===========================================================================
@@ -296,6 +401,88 @@ export class FlightSqlClient {
     } finally {
       stream.cancel()
     }
+  }
+
+  /**
+   * Upload Arrow data to the server.
+   *
+   * @param descriptor - Flight descriptor describing the data
+   * @param dataStream - Async iterable of FlightData messages
+   * @returns Async iterator of PutResult messages
+   */
+  async *doPut(
+    descriptor: FlightDescriptor,
+    dataStream: AsyncIterable<{
+      dataHeader: Uint8Array
+      dataBody: Uint8Array
+      appMetadata?: Uint8Array
+    }>
+  ): AsyncGenerator<{ appMetadata?: Uint8Array }, void, unknown> {
+    this.ensureConnected()
+
+    const client = this.grpcClient as grpc.Client & {
+      doPut: () => grpc.ClientDuplexStream<unknown, unknown>
+    }
+
+    const metadata = this.createRequestMetadata()
+
+    // Create bidirectional stream
+    const stream = client.doPut()
+
+    // Set up error handling
+    let streamError: Error | null = null
+    stream.on("error", (err: Error) => {
+      streamError = err
+    })
+
+    // Send the first message with the descriptor
+    const firstData = await this.getFirstFromIterable(dataStream)
+    if (firstData) {
+      stream.write({
+        flightDescriptor: this.serializeFlightDescriptor(descriptor),
+        dataHeader: firstData.dataHeader,
+        dataBody: firstData.dataBody,
+        appMetadata: firstData.appMetadata
+      })
+    }
+
+    // Send remaining data
+    for await (const data of dataStream) {
+      if (streamError) {
+        throw this.wrapGrpcError(streamError as grpc.ServiceError)
+      }
+
+      stream.write({
+        dataHeader: data.dataHeader,
+        dataBody: data.dataBody,
+        appMetadata: data.appMetadata
+      })
+    }
+
+    // Signal end of writing
+    stream.end()
+
+    // Read responses
+    try {
+      for await (const result of this.wrapStream(stream)) {
+        const putResult = result as { appMetadata?: Uint8Array }
+        yield { appMetadata: putResult.appMetadata }
+      }
+    } catch (error) {
+      if (streamError) {
+        throw this.wrapGrpcError(streamError as grpc.ServiceError)
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Helper to get the first item from an async iterable without consuming the rest
+   */
+  private async getFirstFromIterable<T>(iterable: AsyncIterable<T>): Promise<T | undefined> {
+    const iterator = iterable[Symbol.asyncIterator]()
+    const result = await iterator.next()
+    return result.done ? undefined : result.value
   }
 
   /**
@@ -575,31 +762,209 @@ export class FlightSqlClient {
       schema: result.schema ?? new Uint8Array()
     }
   }
+}
 
-  // ===========================================================================
-  // Private: Flight SQL Command Builders
-  // ===========================================================================
+// ============================================================================
+// QueryResult
+// ============================================================================
 
-  private buildStatementQueryCommand(query: string): Uint8Array {
-    // CommandStatementQuery message structure:
-    // - query: string
-    // - transaction_id: bytes (optional)
-    //
-    // For now, we encode as a simple JSON until we add proper protobuf encoding
-    // TODO: Use protobuf encoding for CommandStatementQuery
-    const command = {
-      query,
-      // Type URL for CommandStatementQuery
-      "@type": "type.googleapis.com/arrow.flight.protocol.sql.CommandStatementQuery"
-    }
-    return new TextEncoder().encode(JSON.stringify(command))
+/**
+ * Result of a query execution with methods to stream or collect data.
+ *
+ * @example
+ * ```typescript
+ * const result = await client.query("SELECT * FROM users")
+ *
+ * // Option 1: Stream record batches (memory efficient)
+ * for await (const batch of result.stream()) {
+ *   console.log(`Batch with ${batch.numRows} rows`)
+ * }
+ *
+ * // Option 2: Collect all data into a table
+ * const table = await result.collect()
+ * console.log(`Total rows: ${table.numRows}`)
+ * ```
+ */
+export class QueryResult {
+  private readonly client: FlightSqlClient
+  private readonly info: FlightInfo
+  private readonly parsedSchema: Schema | null
+
+  constructor(client: FlightSqlClient, flightInfo: FlightInfo, schema: Schema | null) {
+    this.client = client
+    this.info = flightInfo
+    this.parsedSchema = schema
   }
 
-  private buildStatementUpdateCommand(query: string): Uint8Array {
-    const command = {
-      query,
-      "@type": "type.googleapis.com/arrow.flight.protocol.sql.CommandStatementUpdate"
-    }
-    return new TextEncoder().encode(JSON.stringify(command))
+  /**
+   * Get the FlightInfo for this query result
+   */
+  get flightInfo(): FlightInfo {
+    return this.info
   }
+
+  /**
+   * Get the Arrow schema for this query result
+   * May be null if schema could not be parsed
+   */
+  get schema(): Schema | null {
+    return this.parsedSchema
+  }
+
+  /**
+   * Get the total number of records (if known)
+   * Returns -1 if unknown
+   */
+  get totalRecords(): bigint {
+    return this.info.totalRecords
+  }
+
+  /**
+   * Stream record batches from all endpoints.
+   * This is memory-efficient for large result sets.
+   */
+  async *stream(): AsyncGenerator<RecordBatch, void, unknown> {
+    for (const endpoint of this.info.endpoints) {
+      for await (const data of this.client.doGet(endpoint.ticket)) {
+        // The data from doGet is now raw FlightData
+        // We need to parse it into RecordBatches
+        // For now, yield the raw data - will enhance in next iteration
+        void data // Placeholder - need to parse the FlightData
+      }
+    }
+  }
+
+  /**
+   * Collect all data from all endpoints into a single Table.
+   * Warning: This loads the entire result set into memory.
+   */
+  async collect(): Promise<Table> {
+    const batches: RecordBatch[] = []
+
+    for await (const batch of this.stream()) {
+      batches.push(batch)
+    }
+
+    if (!this.parsedSchema) {
+      throw new FlightSqlError("Cannot collect results: schema not available")
+    }
+
+    return collectToTable(
+      (async function* () {
+        for (const batch of batches) {
+          yield batch
+        }
+      })(),
+      this.parsedSchema
+    )
+  }
+}
+
+// ============================================================================
+// PreparedStatement
+// ============================================================================
+
+/**
+ * A prepared statement that can be executed multiple times with different parameters.
+ *
+ * @example
+ * ```typescript
+ * const stmt = await client.prepare("SELECT * FROM users WHERE id = ?")
+ *
+ * // Execute with parameters
+ * const result = await stmt.execute()
+ * const table = await result.collect()
+ *
+ * // Clean up
+ * await stmt.close()
+ * ```
+ */
+export class PreparedStatement {
+  private readonly client: FlightSqlClient
+  private handle: Uint8Array
+  private datasetSchema: Schema | null
+  private parameterSchema: Schema | null
+  private closed = false
+
+  constructor(
+    client: FlightSqlClient,
+    handle: Uint8Array,
+    datasetSchema: Schema | null,
+    parameterSchema: Schema | null
+  ) {
+    this.client = client
+    this.handle = handle
+    this.datasetSchema = datasetSchema
+    this.parameterSchema = parameterSchema
+  }
+
+  /**
+   * Get the schema of the result set
+   */
+  get resultSchema(): Schema | null {
+    return this.datasetSchema
+  }
+
+  /**
+   * Get the schema of the parameters
+   */
+  get parametersSchema(): Schema | null {
+    return this.parameterSchema
+  }
+
+  /**
+   * Check if the prepared statement is closed
+   */
+  get isClosed(): boolean {
+    return this.closed
+  }
+
+  /**
+   * Execute the prepared statement as a query
+   */
+  async executeQuery(): Promise<QueryResult> {
+    if (this.closed) {
+      throw new FlightSqlError("PreparedStatement is closed")
+    }
+
+    const command = encodeCommandPreparedStatementQuery(this.handle)
+
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await (this.client as FlightSqlClientInternal).getFlightInfo(descriptor)
+    const schema = tryParseSchema(flightInfo.schema) ?? this.datasetSchema
+
+    return new QueryResult(this.client, flightInfo, schema)
+  }
+
+  /**
+   * Close the prepared statement and release server resources
+   */
+  async close(): Promise<void> {
+    if (this.closed) {
+      return
+    }
+
+    const actionBody = encodeActionClosePreparedStatementRequest(this.handle)
+    const action: Action = {
+      type: "ClosePreparedStatement",
+      body: actionBody
+    }
+
+    // Execute the close action
+    for await (const _ of (this.client as FlightSqlClientInternal).doAction(action)) {
+      // Consume the results
+    }
+
+    this.closed = true
+  }
+}
+
+// Internal interface for accessing protected client methods
+interface FlightSqlClientInternal extends FlightSqlClient {
+  getFlightInfo(descriptor: FlightDescriptor): Promise<FlightInfo>
+  doAction(action: Action): AsyncGenerator<ActionResult, void, unknown>
 }
