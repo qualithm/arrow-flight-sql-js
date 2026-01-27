@@ -178,6 +178,96 @@ The project has a complete, production-ready Arrow Flight SQL client:
 - [ ] Publish `@qualithm/arrow-flight-sql` to npm
 - [ ] Full API documentation
 
+### M7: Push Subscriptions (DoExchange Support)
+
+Enable real-time push subscriptions via Arrow Flight's `DoExchange` RPC.
+
+**Problem:** Current client only supports request-response patterns (`DoGet`, `DoPut`). Cannot
+subscribe to live data streams.
+
+**Solution:** Implement `DoExchange` for bidirectional streaming + high-level `subscribe()` API.
+
+**Implementation:**
+
+- [ ] `doExchange()` — bidirectional streaming RPC (client sends FlightData, server streams
+      FlightData)
+- [ ] Subscription protocol — encode subscribe/unsubscribe commands in FlightData `appMetadata`
+- [ ] `subscribe(query, options)` — high-level API returning `AsyncGenerator<RecordBatch>`
+- [ ] Heartbeat handling — process server heartbeats, detect stale connections
+- [ ] Reconnection — automatic resubscribe on connection loss with configurable backoff
+- [ ] Cancellation — clean unsubscribe on `AbortSignal` or explicit `unsubscribe()`
+- [ ] Metrics — `subscription_batches_received`, `subscription_reconnects`,
+      `subscription_latency_ms`
+
+**API Design:**
+
+```typescript
+import { FlightSqlClient } from "@qualithm/arrow-flight-sql"
+
+const client = new FlightSqlClient({ host: "localhost", port: 50051 })
+await client.connect()
+
+// High-level subscription API
+const subscription = await client.subscribe("SELECT * FROM events WHERE status = 'pending'", {
+  mode: "CHANGES_ONLY", // 'FULL' | 'CHANGES_ONLY' | 'TAIL'
+  heartbeatMs: 30_000, // Server heartbeat interval
+  signal: abortController.signal // Cancellation
+})
+
+// Consume as async iterator
+for await (const batch of subscription) {
+  console.log(`Received ${batch.numRows} rows`)
+}
+
+// Or manual control
+const sub = await client.subscribe(query)
+await sub.next() // Get next batch
+await sub.unsubscribe() // Clean disconnect
+```
+
+**Low-level DoExchange:**
+
+```typescript
+// For custom bidirectional protocols
+const exchange = client.doExchange(descriptor)
+
+// Send data to server
+await exchange.send(flightData)
+
+// Receive data from server
+for await (const response of exchange) {
+  process(response)
+}
+
+// Half-close (signal end of client stream)
+await exchange.end()
+```
+
+**Protocol:**
+
+```
+Client                                Server
+  │                                     │
+  │── FlightData(SUBSCRIBE, query) ───▶│
+  │                                     │
+  │◀── FlightData(schema) ─────────────│
+  │◀── FlightData(initial batch) ──────│
+  │◀── FlightData(HEARTBEAT) ──────────│  (keep-alive)
+  │◀── FlightData(change batch) ───────│  (on new data)
+  │        ...                          │
+  │── FlightData(UNSUBSCRIBE) ────────▶│
+  │◀── FlightData(COMPLETE) ───────────│
+```
+
+**Dependencies:**
+
+- Requires Lakehouse M5 (Push Subscriptions) server-side implementation
+- Uses existing gRPC bidirectional streaming support in `@grpc/grpc-js`
+
+Acceptance: Subscription receives batches within 100ms of server push. Reconnects automatically on
+transient failures. Clean cancellation releases all resources. Works with Qualithm Lakehouse
+subscription endpoints.
+
 ---
 
 ## Learnings
