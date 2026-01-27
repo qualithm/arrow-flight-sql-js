@@ -52,18 +52,18 @@ consumer; the library must work with any compliant Flight SQL server.
 
 ## Current Reality
 
-**Status: M1+M2 Complete – Core Implementation**
+**Status: M1+M2+M3 Complete – Core Implementation with Connection Management**
 
 The project has a working Arrow Flight SQL client implementation:
 
 - `src/client.ts` – Main `FlightSqlClient`, `QueryResult`, `PreparedStatement` classes ✅
-- `src/pool.ts` – Connection pool implementation (not yet implemented)
+- `src/pool.ts` – Connection pool with health checking and graceful shutdown ✅
+- `src/retry.ts` – Retry logic with exponential backoff and jitter ✅
 - `src/types.ts` – TypeScript type definitions for Flight SQL ✅
 - `src/proto.ts` – Manual protobuf encoding/decoding for Flight SQL commands ✅
 - `src/arrow.ts` – Arrow IPC parsing utilities ✅
 - `src/errors.ts` – Custom error types with gRPC status mapping ✅
 - `src/query-builder.ts` – Query builder utilities (not yet implemented)
-- `src/retry.ts` – Retry logic with backoff (not yet implemented)
 - `src/index.ts` – Public API exports ✅
 - `src/generated/index.ts` – Proto loader utilities ✅
 
@@ -139,12 +139,12 @@ The project has a working Arrow Flight SQL client implementation:
 - [x] `doPut()` – Upload Arrow data
 - [x] Prepared statement support (`prepare()`, `PreparedStatement` class)
 
-### M3: Connection Management
+### M3: Connection Management ✅
 
-- [ ] Connection pooling with configurable limits
-- [ ] Automatic reconnection with exponential backoff
-- [ ] Health checking and connection validation
-- [ ] Graceful shutdown
+- [x] Connection pooling with configurable limits (`FlightSqlPool`)
+- [x] Automatic reconnection with exponential backoff (`RetryPolicy`, `withRetry`)
+- [x] Health checking and connection validation
+- [x] Graceful shutdown
 
 ### M4: Catalog Introspection
 
@@ -182,3 +182,5 @@ The project has a working Arrow Flight SQL client implementation:
 | 2026-01-26 | ESLint with `erasableSyntaxOnly` requires const objects instead of enums (e.g., DescriptorType uses `as const` pattern).                                        |
 | 2026-01-26 | gRPC streams in @grpc/grpc-js are async iterable, avoiding need for manual stream-to-iterator conversion.                                                       |
 | 2026-01-26 | Arrow IPC messages use custom framing (continuation byte + metadata length) that differs from standard Arrow file format.                                       |
+| 2026-01-27 | Connection pool uses object wrapper pattern for error state tracking (allows TypeScript to understand mutation from event handlers).                            |
+| 2026-01-27 | RetryPolicy class provides reusable retry configuration with pre-built policies (none, fast, default, aggressive, reconnection).                                |

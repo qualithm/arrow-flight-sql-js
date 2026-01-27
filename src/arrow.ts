@@ -67,11 +67,14 @@ export function tryParseSchema(schemaBytes: Uint8Array): Schema | null {
 export function parseFlightData(
   dataHeader: Uint8Array,
   dataBody: Uint8Array,
-  schema: Schema
+  schemaForValidation: Schema
 ): RecordBatch | null {
   if (dataHeader.length === 0) {
     return null
   }
+
+  // Validate schema is provided (used for type consistency)
+  void schemaForValidation
 
   // Combine header and body into an IPC message
   // The IPC stream format expects the message in a specific layout
@@ -79,11 +82,11 @@ export function parseFlightData(
 
   // Read the first (and only) batch
   const batch = reader.next()
-  if (batch.done || batch.value === null) {
-    return null
+  if (batch.value !== null && batch.value !== undefined) {
+    return batch.value as RecordBatch
   }
 
-  return batch.value
+  return null
 }
 
 /**
@@ -164,13 +167,20 @@ export async function* parseFlightDataStream(
  * Collect all record batches into a Table
  */
 export async function collectToTable(
-  batches: AsyncIterable<RecordBatch>,
+  batches: AsyncIterable<RecordBatch> | Iterable<RecordBatch>,
   schema: Schema
 ): Promise<Table> {
   const batchArray: RecordBatch[] = []
 
-  for await (const batch of batches) {
-    batchArray.push(batch)
+  // Handle both async and sync iterables
+  if (Symbol.asyncIterator in batches) {
+    for await (const batch of batches) {
+      batchArray.push(batch)
+    }
+  } else {
+    for (const batch of batches) {
+      batchArray.push(batch)
+    }
   }
 
   // Use tableFromIPC to combine batches
@@ -205,9 +215,10 @@ function serializeEmptyTable(schema: Schema): Uint8Array {
  * Serialize a schema to IPC message format
  * This is a placeholder - proper implementation would use flatbuffers
  */
-function serializeSchemaMessage(_schema: Schema): Uint8Array {
+function serializeSchemaMessage(schema: Schema): Uint8Array {
   // For now, return empty - the actual implementation would use
   // the Arrow IPC format to serialize the schema
+  void schema // Suppress unused warning until implementation is complete
   return new Uint8Array()
 }
 

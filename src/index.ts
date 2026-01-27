@@ -67,6 +67,20 @@ export {
   TypeUrls
 } from "./proto"
 
+// Connection pool
+export { FlightSqlPool } from "./pool"
+
+// Retry utilities
+export type { RetryResult } from "./retry"
+export {
+  calculateBackoffDelay,
+  defaultIsRetryable,
+  isRetryableGrpcError,
+  retryPolicies,
+  RetryPolicy,
+  withRetry
+} from "./retry"
+
 // Type exports
 export type {
   Action,

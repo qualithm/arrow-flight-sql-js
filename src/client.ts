@@ -8,7 +8,7 @@
 import * as grpc from "@grpc/grpc-js"
 import type { RecordBatch, Schema, Table } from "apache-arrow"
 
-import { collectToTable, tryParseSchema } from "./arrow"
+import { collectToTable, parseFlightData, tryParseSchema } from "./arrow"
 import { AuthenticationError, ConnectionError, FlightSqlError } from "./errors"
 import { getFlightServiceDefinition } from "./generated"
 import {
@@ -421,18 +421,18 @@ export class FlightSqlClient {
     this.ensureConnected()
 
     const client = this.grpcClient as grpc.Client & {
-      doPut: () => grpc.ClientDuplexStream<unknown, unknown>
+      doPut: (metadata: grpc.Metadata) => grpc.ClientDuplexStream<unknown, unknown>
     }
 
-    const metadata = this.createRequestMetadata()
+    const requestMetadata = this.createRequestMetadata()
 
     // Create bidirectional stream
-    const stream = client.doPut()
+    const stream = client.doPut(requestMetadata)
 
-    // Set up error handling
-    let streamError: Error | null = null
+    // Use object wrapper to track errors (allows TypeScript to understand mutation)
+    const errorState = { error: null as Error | null }
     stream.on("error", (err: Error) => {
-      streamError = err
+      errorState.error = err
     })
 
     // Send the first message with the descriptor
@@ -448,8 +448,8 @@ export class FlightSqlClient {
 
     // Send remaining data
     for await (const data of dataStream) {
-      if (streamError) {
-        throw this.wrapGrpcError(streamError as grpc.ServiceError)
+      if (errorState.error) {
+        throw this.wrapGrpcError(errorState.error as grpc.ServiceError)
       }
 
       stream.write({
@@ -469,8 +469,8 @@ export class FlightSqlClient {
         yield { appMetadata: putResult.appMetadata }
       }
     } catch (error) {
-      if (streamError) {
-        throw this.wrapGrpcError(streamError as grpc.ServiceError)
+      if (errorState.error) {
+        throw this.wrapGrpcError(errorState.error as grpc.ServiceError)
       }
       throw error
     }
@@ -824,12 +824,24 @@ export class QueryResult {
    * This is memory-efficient for large result sets.
    */
   async *stream(): AsyncGenerator<RecordBatch, void, unknown> {
+    if (!this.parsedSchema) {
+      throw new FlightSqlError("Cannot stream results: schema not available")
+    }
+
     for (const endpoint of this.info.endpoints) {
       for await (const data of this.client.doGet(endpoint.ticket)) {
-        // The data from doGet is now raw FlightData
-        // We need to parse it into RecordBatches
-        // For now, yield the raw data - will enhance in next iteration
-        void data // Placeholder - need to parse the FlightData
+        // Parse the FlightData into a RecordBatch
+        const flightData = data as { dataHeader?: Uint8Array; dataBody?: Uint8Array }
+        if (flightData.dataHeader && flightData.dataBody) {
+          const batch = parseFlightData(
+            flightData.dataHeader,
+            flightData.dataBody,
+            this.parsedSchema
+          )
+          if (batch) {
+            yield batch
+          }
+        }
       }
     }
   }
@@ -849,14 +861,16 @@ export class QueryResult {
       throw new FlightSqlError("Cannot collect results: schema not available")
     }
 
-    return collectToTable(
-      (async function* () {
-        for (const batch of batches) {
-          yield batch
-        }
-      })(),
-      this.parsedSchema
-    )
+    return collectToTable(this.streamBatches(batches), this.parsedSchema)
+  }
+
+  /**
+   * Helper to convert batches array to async generator
+   */
+  private *streamBatches(batches: RecordBatch[]): Generator<RecordBatch, void, unknown> {
+    for (const batch of batches) {
+      yield batch
+    }
   }
 }
 
@@ -955,8 +969,8 @@ export class PreparedStatement {
     }
 
     // Execute the close action
-    for await (const _ of (this.client as FlightSqlClientInternal).doAction(action)) {
-      // Consume the results
+    for await (const result of (this.client as FlightSqlClientInternal).doAction(action)) {
+      void result // Consume the results
     }
 
     this.closed = true
