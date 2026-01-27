@@ -46,7 +46,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "docs": "typedoc --out docs/api src/index.ts",
+    "docs": "typedoc",
     "eslint:fix": "eslint --fix .",
     "prepublishOnly": "bun run clean && bun run build",
     "prettier:format": "prettier --write .",

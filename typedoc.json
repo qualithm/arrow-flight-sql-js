@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "name": "@qualithm/arrow-flight-sql",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/qualithm/arrow-flight-sql-js",
+    "npm": "https://www.npmjs.com/package/@qualithm/arrow-flight-sql"
+  },
+  "githubPages": true,
+  "plugin": [],
+  "searchInComments": true,
+  "categorizeByGroup": true,
+  "sort": ["alphabetical"],
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "inherited": true,
+    "external": false
+  }
+}

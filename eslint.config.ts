@@ -45,8 +45,8 @@ const namingConventionBase = [
   {
     selector: "parameter",
     modifiers: ["unused"],
-    format: null,
-    filter: { regex: "^_$", match: true }
+    leadingUnderscore: "allow",
+    format: ["camelCase"]
   },
   { selector: "parameterProperty", format: ["camelCase"] },
 

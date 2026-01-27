@@ -1,8 +1,10 @@
 # Arrow Flight SQL JS
 
-Arrow Flight SQL client for JavaScript.
+A standards-compliant Arrow Flight SQL client for JavaScript/TypeScript.
 
-> ⚠️ **Status: In Development** – Not yet ready for production use.
+> 📦 **Package:** `@qualithm/arrow-flight-sql`
+>
+> 📚 **[API Documentation](https://qualithm.github.io/arrow-flight-sql-js/)**
 
 ## Overview
 
@@ -31,19 +33,19 @@ We aim for **API parity** with the official clients where JavaScript idioms allo
 
 ```bash
 # npm
-npm install arrow-flight-sql-js
+npm install @qualithm/arrow-flight-sql
 
 # bun
-bun add arrow-flight-sql-js
+bun add @qualithm/arrow-flight-sql
 
 # pnpm
-pnpm add arrow-flight-sql-js
+pnpm add @qualithm/arrow-flight-sql
 ```
 
 ## Quick Start
 
 ```typescript
-import { FlightSqlClient } from "arrow-flight-sql-js"
+import { FlightSqlClient } from "@qualithm/arrow-flight-sql"
 
 // Create a client
 const client = new FlightSqlClient({
@@ -69,7 +71,7 @@ await client.close()
 ## Connection Pooling
 
 ```typescript
-import { FlightSqlPool } from "arrow-flight-sql-js"
+import { FlightSqlPool } from "@qualithm/arrow-flight-sql"
 
 const pool = new FlightSqlPool({
   host: "localhost",
@@ -110,7 +112,7 @@ import {
   InMemoryMetricsHandler,
   MetricNames,
   type MetricsHandler
-} from "arrow-flight-sql-js"
+} from "@qualithm/arrow-flight-sql"
 
 // Console handler for development
 const client = new FlightSqlClient({
@@ -176,7 +178,7 @@ import {
   ProtocolError, // Protocol/encoding issues
   NotFoundError, // Resource not found
   CancelledError // Operation cancelled
-} from "arrow-flight-sql-js"
+} from "@qualithm/arrow-flight-sql"
 
 try {
   await client.execute("SELECT * FROM missing_table")
@@ -197,7 +199,7 @@ try {
 Configure automatic retries for transient failures:
 
 ```typescript
-import { FlightSqlClient, RetryPolicy, retryPolicies } from "arrow-flight-sql-js"
+import { FlightSqlClient, RetryPolicy, retryPolicies } from "@qualithm/arrow-flight-sql"
 
 // Use pre-configured policies
 const client = new FlightSqlClient({

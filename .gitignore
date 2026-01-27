@@ -4,3 +4,6 @@ node_modules
 
 # Downloaded proto files (regenerate with: bun run proto:generate)
 proto/
+
+# Generated documentation (regenerate with: bun run docs)
+docs/api/
