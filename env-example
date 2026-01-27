@@ -1,1 +1,13 @@
-# Todo
+# Arrow Flight SQL Test Configuration
+
+# Flight SQL Server
+FLIGHT_SQL_HOST=localhost
+FLIGHT_SQL_PORT=8815
+FLIGHT_SQL_TLS=false
+
+# Authentication (for lakehouse)
+FLIGHT_SQL_USERNAME=admin
+FLIGHT_SQL_PASSWORD=lakehouse
+
+# Test Control
+SKIP_INTEGRATION_TESTS=false

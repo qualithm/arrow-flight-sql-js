@@ -411,5 +411,5 @@ export interface RetryOptions {
   jitter?: boolean
 
   /** Custom function to determine if error is retryable */
-  isRetryable?: (error: Error) => boolean
+  isRetryable?: (error: unknown) => boolean
 }

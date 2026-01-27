@@ -147,15 +147,15 @@ export interface MetricsHandler {
  * Used when no metrics handler is configured.
  */
 export class NoopMetricsHandler implements MetricsHandler {
-  recordOperation(): void {
+  recordOperation(_event: MetricEvent): void {
     // Intentionally empty
   }
 
-  recordGauge(): void {
+  recordGauge(_event: GaugeEvent): void {
     // Intentionally empty
   }
 
-  recordCounter(): void {
+  recordCounter(_event: CounterEvent): void {
     // Intentionally empty
   }
 }
@@ -250,7 +250,9 @@ export class InMemoryMetricsHandler implements MetricsHandler {
    */
   getAverageDuration(operation: OperationType): number {
     const ops = this.getOperationsByType(operation)
-    if (ops.length === 0) return 0
+    if (ops.length === 0) {
+      return 0
+    }
     return ops.reduce((sum, e) => sum + e.durationMs, 0) / ops.length
   }
 
@@ -259,7 +261,9 @@ export class InMemoryMetricsHandler implements MetricsHandler {
    */
   getErrorRate(operation: OperationType): number {
     const ops = this.getOperationsByType(operation)
-    if (ops.length === 0) return 0
+    if (ops.length === 0) {
+      return 0
+    }
     const errors = ops.filter((e) => e.status !== "success").length
     return errors / ops.length
   }
@@ -299,9 +303,7 @@ export class InMemoryMetricsHandler implements MetricsHandler {
     for (const op of this.operations) {
       operationCounts[op.operation] = (operationCounts[op.operation] ?? 0) + 1
 
-      if (!operationDurations[op.operation]) {
-        operationDurations[op.operation] = []
-      }
+      operationDurations[op.operation] ??= []
       operationDurations[op.operation].push(op.durationMs)
 
       if (op.status === "success") {

@@ -10,7 +10,7 @@ import {
   type RecordBatch,
   RecordBatchReader,
   type Schema,
-  type Table,
+  Table,
   tableFromIPC
 } from "apache-arrow"
 

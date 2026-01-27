@@ -8,8 +8,8 @@ import {
   calculateBackoffDelay,
   defaultIsRetryable,
   isRetryableGrpcError,
-  RetryPolicy,
   retryPolicies,
+  RetryPolicy,
   withRetry
 } from "../../retry"
 
@@ -141,9 +141,9 @@ describe("calculateBackoffDelay", () => {
 describe("withRetry", () => {
   test("should return result on first success", async () => {
     let attempts = 0
-    const result = await withRetry(async () => {
+    const result = await withRetry(() => {
       attempts++
-      return "success"
+      return Promise.resolve("success")
     })
 
     expect(result.value).toBe("success")
@@ -154,12 +154,12 @@ describe("withRetry", () => {
   test("should retry on transient failure", async () => {
     let attempts = 0
     const result = await withRetry(
-      async () => {
+      () => {
         attempts++
         if (attempts < 3) {
-          throw Object.assign(new Error("Unavailable"), { code: 14 })
+          return Promise.reject(Object.assign(new Error("Unavailable"), { code: 14 }))
         }
-        return "success"
+        return Promise.resolve("success")
       },
       { maxRetries: 5, initialDelayMs: 1 }
     )
@@ -171,44 +171,52 @@ describe("withRetry", () => {
   test("should throw after max retries", async () => {
     let attempts = 0
 
-    await expect(
-      withRetry(
-        async () => {
+    let caughtError: Error | undefined
+    try {
+      await withRetry(
+        (): Promise<unknown> => {
           attempts++
-          throw Object.assign(new Error("Unavailable"), { code: 14 })
+          return Promise.reject(Object.assign(new Error("Unavailable"), { code: 14 }))
         },
         { maxRetries: 2, initialDelayMs: 1 }
       )
-    ).rejects.toThrow("Unavailable")
+    } catch (e) {
+      caughtError = e as Error
+    }
 
+    expect(caughtError?.message).toBe("Unavailable")
     expect(attempts).toBe(3) // Initial + 2 retries
   })
 
   test("should not retry non-retryable errors", async () => {
     let attempts = 0
 
-    await expect(
-      withRetry(
-        async () => {
+    let caughtError: Error | undefined
+    try {
+      await withRetry(
+        (): Promise<unknown> => {
           attempts++
-          throw new Error("Non-retryable error")
+          return Promise.reject(new Error("Non-retryable error"))
         },
         { maxRetries: 3, initialDelayMs: 1 }
       )
-    ).rejects.toThrow("Non-retryable error")
+    } catch (e) {
+      caughtError = e as Error
+    }
 
+    expect(caughtError?.message).toBe("Non-retryable error")
     expect(attempts).toBe(1) // Only initial attempt
   })
 
   test("should use custom isRetryable function", async () => {
     let attempts = 0
     const result = await withRetry(
-      async () => {
+      () => {
         attempts++
         if (attempts < 2) {
-          throw new Error("Custom retryable")
+          return Promise.reject(new Error("Custom retryable"))
         }
-        return "success"
+        return Promise.resolve("success")
       },
       {
         maxRetries: 3,
@@ -238,7 +246,7 @@ describe("RetryPolicy", () => {
   test("should execute operation with policy", async () => {
     const policy = new RetryPolicy({ maxRetries: 2, initialDelayMs: 1 })
 
-    const result = await policy.execute(async () => "success")
+    const result = await policy.execute(() => Promise.resolve("success"))
 
     expect(result.value).toBe("success")
     expect(result.attempts).toBe(1)
@@ -248,12 +256,12 @@ describe("RetryPolicy", () => {
     const policy = new RetryPolicy({ maxRetries: 2, initialDelayMs: 1 })
 
     let calls = 0
-    const wrapped = policy.wrap(async (x: number) => {
+    const wrapped = policy.wrap((x: number) => {
       calls++
       if (calls === 1) {
-        throw Object.assign(new Error("Retry"), { code: 14 })
+        return Promise.reject(Object.assign(new Error("Retry"), { code: 14 }))
       }
-      return x * 2
+      return Promise.resolve(x * 2)
     })
 
     const result = await wrapped(21)
@@ -289,13 +297,17 @@ describe("retryPolicies", () => {
   test("none policy should have 0 maxRetries", async () => {
     // none policy fails immediately without retries
     let attempts = 0
-    await expect(
-      retryPolicies.none.execute(async () => {
+    let threw = false
+    try {
+      await retryPolicies.none.execute((): Promise<unknown> => {
         attempts++
-        throw Object.assign(new Error("Fail"), { code: 14 })
+        return Promise.reject(Object.assign(new Error("Fail"), { code: 14 }))
       })
-    ).rejects.toThrow()
+    } catch {
+      threw = true
+    }
 
+    expect(threw).toBe(true)
     // maxRetries: 0 means 1 attempt total
     expect(attempts).toBe(1)
   })

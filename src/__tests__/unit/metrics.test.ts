@@ -2,7 +2,8 @@
  * Unit tests for metrics and observability module
  */
 
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import type { Mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 
 import {
   ConsoleMetricsHandler,
@@ -11,13 +12,7 @@ import {
   MetricsTimer,
   NoopMetricsHandler,
   startTimer,
-  withMetrics,
-  type CounterEvent,
-  type GaugeEvent,
-  type MetricEvent,
-  type MetricsHandler,
-  type OperationStatus,
-  type OperationType
+  withMetrics
 } from "../../metrics"
 
 // ============================================================================
@@ -28,9 +23,9 @@ describe("NoopMetricsHandler", () => {
   test("should implement MetricsHandler interface", () => {
     const handler = new NoopMetricsHandler()
 
-    expect(handler.recordOperation).toBeDefined()
-    expect(handler.recordGauge).toBeDefined()
-    expect(handler.recordCounter).toBeDefined()
+    expect(typeof handler.recordOperation).toBe("function")
+    expect(typeof handler.recordGauge).toBe("function")
+    expect(typeof handler.recordCounter).toBe("function")
   })
 
   test("should accept all event types without error", () => {
@@ -62,8 +57,8 @@ describe("NoopMetricsHandler", () => {
 // ============================================================================
 
 describe("ConsoleMetricsHandler", () => {
-  let consoleLogSpy: ReturnType<typeof spyOn>
-  let consoleErrorSpy: ReturnType<typeof spyOn>
+  let consoleLogSpy: Mock<typeof console.log>
+  let consoleErrorSpy: Mock<typeof console.error>
 
   beforeEach(() => {
     consoleLogSpy = spyOn(console, "log").mockImplementation(() => undefined)
@@ -537,8 +532,8 @@ describe("withMetrics", () => {
   test("should record success for resolved promise", async () => {
     const handler = new InMemoryMetricsHandler()
 
-    const result = await withMetrics(handler, "query", async () => {
-      return 42
+    const result = await withMetrics(handler, "query", () => {
+      return Promise.resolve(42)
     })
 
     expect(result).toBe(42)
@@ -553,12 +548,16 @@ describe("withMetrics", () => {
     const handler = new InMemoryMetricsHandler()
     const error = new Error("Query failed")
 
-    await expect(
-      withMetrics(handler, "query", async () => {
-        throw error
+    let caughtError: unknown
+    try {
+      await withMetrics(handler, "query", (): Promise<unknown> => {
+        return Promise.reject(error)
       })
-    ).rejects.toThrow("Query failed")
+    } catch (e) {
+      caughtError = e
+    }
 
+    expect(caughtError).toBe(error)
     const ops = handler.getOperations()
     expect(ops.length).toBe(1)
     expect(ops[0].status).toBe("error")
@@ -570,12 +569,16 @@ describe("withMetrics", () => {
     const timeoutError = new Error("Timeout exceeded")
     timeoutError.name = "TimeoutError"
 
-    await expect(
-      withMetrics(handler, "query", async () => {
-        throw timeoutError
+    let threw = false
+    try {
+      await withMetrics(handler, "query", (): Promise<unknown> => {
+        return Promise.reject(timeoutError)
       })
-    ).rejects.toThrow()
+    } catch {
+      threw = true
+    }
 
+    expect(threw).toBe(true)
     const ops = handler.getOperations()
     expect(ops[0].status).toBe("timeout")
   })
@@ -585,12 +588,16 @@ describe("withMetrics", () => {
     const cancelledError = new Error("Operation cancelled")
     cancelledError.name = "CancelledError"
 
-    await expect(
-      withMetrics(handler, "query", async () => {
-        throw cancelledError
+    let threw = false
+    try {
+      await withMetrics(handler, "query", (): Promise<unknown> => {
+        return Promise.reject(cancelledError)
       })
-    ).rejects.toThrow()
+    } catch {
+      threw = true
+    }
 
+    expect(threw).toBe(true)
     const ops = handler.getOperations()
     expect(ops[0].status).toBe("cancelled")
   })
@@ -598,12 +605,18 @@ describe("withMetrics", () => {
   test("should handle non-Error thrown values", async () => {
     const handler = new InMemoryMetricsHandler()
 
-    await expect(
-      withMetrics(handler, "query", async () => {
-        throw "string error" // eslint-disable-line @typescript-eslint/only-throw-error
+    let threw = false
+    try {
+      await withMetrics(handler, "query", (): Promise<unknown> => {
+        // Use throw to bypass Promise.reject type checking
+        // This simulates code that throws a non-Error value
+        throw "string error" as unknown
       })
-    ).rejects.toThrow()
+    } catch {
+      threw = true
+    }
 
+    expect(threw).toBe(true)
     const ops = handler.getOperations()
     expect(ops[0].status).toBe("error")
     expect(ops[0].error?.message).toBe("string error")
@@ -615,8 +628,8 @@ describe("withMetrics", () => {
     await withMetrics(
       handler,
       "query",
-      async () => {
-        return "result"
+      () => {
+        return Promise.resolve("result")
       },
       { table: "users", limit: 100 }
     )
