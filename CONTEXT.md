@@ -286,6 +286,90 @@ Acceptance: Subscription receives batches within 100ms of server push. Reconnect
 transient failures. Clean cancellation releases all resources. Works with Qualithm Lakehouse
 subscription endpoints.
 
+### M8: Cross-Runtime Compatibility (Node.js, Deno, Bun)
+
+Enable the library to work seamlessly across Node.js, Deno, and Bun runtimes.
+
+**Problem:** Currently, `@grpc/grpc-js` is Node.js-specific. While Bun has Node.js compatibility,
+Deno requires explicit Node compat mode. The library lacks runtime detection and conditional imports
+for optimal performance in each environment.
+
+**Solution:** Abstract transport layer, add runtime detection, and provide runtime-specific
+optimizations.
+
+**Implementation:**
+
+- [ ] **Runtime detection** — Detect Node.js, Deno, Bun at runtime via global checks
+- [ ] **Transport abstraction** — Abstract gRPC transport behind interface for swappable
+      implementations
+- [ ] **Bun-native gRPC** — Use Bun's native HTTP/2 when available for better performance
+- [ ] **Deno compatibility** — Ensure `node:` imports work via Deno's Node compat layer
+- [ ] **Conditional exports** — Add `package.json` exports for runtime-specific entry points
+- [ ] **Polyfill strategy** — Document required polyfills (if any) per runtime
+- [ ] **Test matrix** — CI tests on Node.js 20+, Deno 1.40+, Bun 1.0+
+- [ ] **Bundle analysis** — Ensure no Node.js-specific APIs leak into universal code paths
+
+**Package.json Exports:**
+
+```json
+{
+  "exports": {
+    ".": {
+      "bun": "./dist/index.bun.js",
+      "deno": "./dist/index.deno.js",
+      "node": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  }
+}
+```
+
+**Runtime Detection:**
+
+```typescript
+export type Runtime = "node" | "deno" | "bun" | "browser" | "unknown"
+
+export function detectRuntime(): Runtime {
+  if (typeof Bun !== "undefined") return "bun"
+  if (typeof Deno !== "undefined") return "deno"
+  if (typeof process !== "undefined" && process.versions?.node) return "node"
+  if (typeof window !== "undefined") return "browser"
+  return "unknown"
+}
+```
+
+**Transport Interface:**
+
+```typescript
+interface GrpcTransport {
+  createChannel(address: string, credentials: ChannelCredentials): GrpcChannel
+  createClient<T>(channel: GrpcChannel, service: ServiceDefinition): T
+  close(channel: GrpcChannel): Promise<void>
+}
+
+// Node.js implementation uses @grpc/grpc-js
+// Bun implementation uses native HTTP/2 + grpc-js compat
+// Deno implementation uses Node compat or native when available
+```
+
+**Testing Strategy:**
+
+| Runtime | Version | Test Command                     | CI Matrix |
+| ------- | ------- | -------------------------------- | --------- |
+| Node.js | 20, 22  | `node --test`                    | ✓         |
+| Bun     | 1.0+    | `bun test`                       | ✓         |
+| Deno    | 1.40+   | `deno test --allow-net --compat` | ✓         |
+
+**Dependencies:**
+
+- May require `@aspect-build/gzip` or similar for Deno bundle compression
+- Consider `protobuf-es` as lighter protobuf runtime for non-Node environments
+- Investigate `connect-es` for potential gRPC-web universal transport
+
+Acceptance: `bun test`, `deno test`, and `npm test` all pass. Package installs and imports correctly
+in all three runtimes. No runtime-specific code in main exports without conditional loading. README
+documents runtime-specific installation/usage notes.
+
 ---
 
 ## Learnings
