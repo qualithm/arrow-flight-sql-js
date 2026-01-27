@@ -52,7 +52,7 @@ consumer; the library must work with any compliant Flight SQL server.
 
 ## Current Reality
 
-**Status: M1+M2+M3 Complete – Core Implementation with Connection Management**
+**Status: M1+M2+M3+M4 Complete – Core Implementation with Catalog Introspection**
 
 The project has a working Arrow Flight SQL client implementation:
 
@@ -146,13 +146,13 @@ The project has a working Arrow Flight SQL client implementation:
 - [x] Health checking and connection validation
 - [x] Graceful shutdown
 
-### M4: Catalog Introspection
+### M4: Catalog Introspection ✅
 
-- [ ] `getCatalogs()` – List available catalogs
-- [ ] `getSchemas()` – List schemas in catalog
-- [ ] `getTables()` – List tables with filtering
-- [ ] `getTableTypes()` – List table type names
-- [ ] `getPrimaryKeys()` / `getExportedKeys()` / `getImportedKeys()`
+- [x] `getCatalogs()` – List available catalogs
+- [x] `getSchemas()` – List schemas in catalog
+- [x] `getTables()` – List tables with filtering
+- [x] `getTableTypes()` – List table type names
+- [x] `getPrimaryKeys()` / `getExportedKeys()` / `getImportedKeys()`
 
 ### M5: Production Readiness
 
@@ -184,3 +184,4 @@ The project has a working Arrow Flight SQL client implementation:
 | 2026-01-26 | Arrow IPC messages use custom framing (continuation byte + metadata length) that differs from standard Arrow file format.                                       |
 | 2026-01-27 | Connection pool uses object wrapper pattern for error state tracking (allows TypeScript to understand mutation from event handlers).                            |
 | 2026-01-27 | RetryPolicy class provides reusable retry configuration with pre-built policies (none, fast, default, aggressive, reconnection).                                |
+| 2026-01-27 | Catalog introspection methods use a generic fetchCatalogResults helper that parses Arrow IPC data and maps rows to typed objects using field mappers.           |

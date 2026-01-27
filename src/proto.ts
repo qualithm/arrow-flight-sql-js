@@ -358,6 +358,66 @@ export function encodeCommandGetPrimaryKeys(
   return wrapInAny(TypeUrls.commandGetPrimaryKeys, message)
 }
 
+/**
+ * Encode CommandGetExportedKeys message
+ *
+ * message CommandGetExportedKeys {
+ *   optional string catalog = 1;
+ *   optional string db_schema = 2;
+ *   string table = 3;
+ * }
+ */
+export function encodeCommandGetExportedKeys(
+  table: string,
+  catalog?: string,
+  dbSchema?: string
+): Uint8Array {
+  const parts: Uint8Array[] = []
+
+  if (catalog !== undefined) {
+    parts.push(encodeString(1, catalog))
+  }
+
+  if (dbSchema !== undefined) {
+    parts.push(encodeString(2, dbSchema))
+  }
+
+  parts.push(encodeString(3, table))
+
+  const message = concat(...parts)
+  return wrapInAny(TypeUrls.commandGetExportedKeys, message)
+}
+
+/**
+ * Encode CommandGetImportedKeys message
+ *
+ * message CommandGetImportedKeys {
+ *   optional string catalog = 1;
+ *   optional string db_schema = 2;
+ *   string table = 3;
+ * }
+ */
+export function encodeCommandGetImportedKeys(
+  table: string,
+  catalog?: string,
+  dbSchema?: string
+): Uint8Array {
+  const parts: Uint8Array[] = []
+
+  if (catalog !== undefined) {
+    parts.push(encodeString(1, catalog))
+  }
+
+  if (dbSchema !== undefined) {
+    parts.push(encodeString(2, dbSchema))
+  }
+
+  parts.push(encodeString(3, table))
+
+  const message = concat(...parts)
+  return wrapInAny(TypeUrls.commandGetImportedKeys, message)
+}
+
 // ============================================================================
 // Protobuf Decoding Utilities
 // ============================================================================

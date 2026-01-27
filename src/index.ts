@@ -59,6 +59,8 @@ export {
 export {
   encodeCommandGetCatalogs,
   encodeCommandGetDbSchemas,
+  encodeCommandGetExportedKeys,
+  encodeCommandGetImportedKeys,
   encodeCommandGetPrimaryKeys,
   encodeCommandGetTables,
   encodeCommandGetTableTypes,

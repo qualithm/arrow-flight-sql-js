@@ -14,6 +14,13 @@ import { getFlightServiceDefinition } from "./generated"
 import {
   encodeActionClosePreparedStatementRequest,
   encodeActionCreatePreparedStatementRequest,
+  encodeCommandGetCatalogs,
+  encodeCommandGetDbSchemas,
+  encodeCommandGetExportedKeys,
+  encodeCommandGetImportedKeys,
+  encodeCommandGetPrimaryKeys,
+  encodeCommandGetTables,
+  encodeCommandGetTableTypes,
   encodeCommandPreparedStatementQuery,
   encodeCommandStatementQuery,
   encodeCommandStatementUpdate,
@@ -25,13 +32,19 @@ import type {
   ActionResult,
   ActionType,
   AuthConfig,
+  CatalogInfo,
   DescriptorType,
   ExecuteOptions,
   FlightDescriptor,
   FlightInfo,
   FlightSqlClientOptions,
+  ForeignKeyInfo,
   HandshakeResult,
+  PrimaryKeyInfo,
+  SchemaInfo,
   SchemaResult,
+  TableInfo,
+  TableType,
   Ticket
 } from "./types"
 
@@ -305,6 +318,321 @@ export class FlightSqlClient {
     }
 
     return new PreparedStatement(this, handle, datasetSchema, parameterSchema)
+  }
+
+  // ===========================================================================
+  // Catalog Introspection
+  // ===========================================================================
+
+  /**
+   * Get the list of catalogs available on the server.
+   *
+   * @returns Array of catalog information
+   *
+   * @example
+   * ```typescript
+   * const catalogs = await client.getCatalogs()
+   * for (const catalog of catalogs) {
+   *   console.log(catalog.catalogName)
+   * }
+   * ```
+   */
+  async getCatalogs(): Promise<CatalogInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetCatalogs()
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<CatalogInfo>(flightInfo, (row) => ({
+      catalogName: row["catalog_name"] as string
+    }))
+  }
+
+  /**
+   * Get the list of schemas available in a catalog.
+   *
+   * @param catalog - Optional catalog name to filter by
+   * @param schemaFilterPattern - Optional SQL LIKE pattern to filter schema names
+   * @returns Array of schema information
+   *
+   * @example
+   * ```typescript
+   * // Get all schemas
+   * const schemas = await client.getSchemas()
+   *
+   * // Get schemas in specific catalog
+   * const schemas = await client.getSchemas("my_catalog")
+   *
+   * // Get schemas matching pattern
+   * const schemas = await client.getSchemas(undefined, "public%")
+   * ```
+   */
+  async getSchemas(catalog?: string, schemaFilterPattern?: string): Promise<SchemaInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetDbSchemas(catalog, schemaFilterPattern)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<SchemaInfo>(flightInfo, (row) => ({
+      catalogName: row["catalog_name"] as string | undefined,
+      schemaName: row["db_schema_name"] as string
+    }))
+  }
+
+  /**
+   * Get the list of tables available.
+   *
+   * @param options - Filter options
+   * @returns Array of table information
+   *
+   * @example
+   * ```typescript
+   * // Get all tables
+   * const tables = await client.getTables()
+   *
+   * // Get tables in specific catalog/schema
+   * const tables = await client.getTables({
+   *   catalog: "my_catalog",
+   *   schemaPattern: "public"
+   * })
+   *
+   * // Get only views
+   * const views = await client.getTables({ tableTypes: ["VIEW"] })
+   * ```
+   */
+  async getTables(options?: {
+    catalog?: string
+    schemaPattern?: string
+    tablePattern?: string
+    tableTypes?: string[]
+    includeSchema?: boolean
+  }): Promise<TableInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetTables({
+      catalog: options?.catalog,
+      dbSchemaFilterPattern: options?.schemaPattern,
+      tableNameFilterPattern: options?.tablePattern,
+      tableTypes: options?.tableTypes,
+      includeSchema: options?.includeSchema
+    })
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<TableInfo>(flightInfo, (row) => {
+      const info: TableInfo = {
+        catalogName: row["catalog_name"] as string | undefined,
+        schemaName: row["db_schema_name"] as string | undefined,
+        tableName: row["table_name"] as string,
+        tableType: row["table_type"] as string
+      }
+
+      // If includeSchema was requested, parse the table schema
+      const schemaBytes = row["table_schema"] as Uint8Array | undefined
+      if (schemaBytes && schemaBytes.length > 0) {
+        info.schema = tryParseSchema(schemaBytes) ?? undefined
+      }
+
+      return info
+    })
+  }
+
+  /**
+   * Get the list of table types supported by the server.
+   *
+   * @returns Array of table type names (e.g., "TABLE", "VIEW", "SYSTEM TABLE")
+   *
+   * @example
+   * ```typescript
+   * const tableTypes = await client.getTableTypes()
+   * console.log(tableTypes) // [{ tableType: "TABLE" }, { tableType: "VIEW" }, ...]
+   * ```
+   */
+  async getTableTypes(): Promise<TableType[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetTableTypes()
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<TableType>(flightInfo, (row) => ({
+      tableType: row["table_type"] as string
+    }))
+  }
+
+  /**
+   * Get the primary keys for a table.
+   *
+   * @param table - Table name
+   * @param catalog - Optional catalog name
+   * @param schema - Optional schema name
+   * @returns Array of primary key information
+   *
+   * @example
+   * ```typescript
+   * const primaryKeys = await client.getPrimaryKeys("users")
+   * for (const pk of primaryKeys) {
+   *   console.log(`${pk.columnName} (sequence: ${pk.keySequence})`)
+   * }
+   * ```
+   */
+  async getPrimaryKeys(
+    table: string,
+    catalog?: string,
+    schema?: string
+  ): Promise<PrimaryKeyInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetPrimaryKeys(table, catalog, schema)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<PrimaryKeyInfo>(flightInfo, (row) => ({
+      catalogName: row["catalog_name"] as string | undefined,
+      schemaName: row["db_schema_name"] as string | undefined,
+      tableName: row["table_name"] as string,
+      columnName: row["column_name"] as string,
+      keySequence: row["key_sequence"] as number,
+      keyName: row["key_name"] as string | undefined
+    }))
+  }
+
+  /**
+   * Get the foreign keys that reference a table's primary key (exported keys).
+   *
+   * @param table - Table name
+   * @param catalog - Optional catalog name
+   * @param schema - Optional schema name
+   * @returns Array of foreign key information
+   *
+   * @example
+   * ```typescript
+   * // Find all tables that reference the "users" table
+   * const exportedKeys = await client.getExportedKeys("users")
+   * ```
+   */
+  async getExportedKeys(
+    table: string,
+    catalog?: string,
+    schema?: string
+  ): Promise<ForeignKeyInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetExportedKeys(table, catalog, schema)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchForeignKeyResults(flightInfo)
+  }
+
+  /**
+   * Get the foreign keys in a table (imported keys).
+   *
+   * @param table - Table name
+   * @param catalog - Optional catalog name
+   * @param schema - Optional schema name
+   * @returns Array of foreign key information
+   *
+   * @example
+   * ```typescript
+   * // Find all foreign keys in the "orders" table
+   * const importedKeys = await client.getImportedKeys("orders")
+   * ```
+   */
+  async getImportedKeys(
+    table: string,
+    catalog?: string,
+    schema?: string
+  ): Promise<ForeignKeyInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetImportedKeys(table, catalog, schema)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchForeignKeyResults(flightInfo)
+  }
+
+  /**
+   * Helper to fetch catalog results and map rows to typed objects
+   */
+  private async fetchCatalogResults<T>(
+    flightInfo: FlightInfo,
+    mapper: (row: Record<string, unknown>) => T
+  ): Promise<T[]> {
+    const results: T[] = []
+
+    // Parse schema from flightInfo
+    const schema = tryParseSchema(flightInfo.schema)
+    if (!schema) {
+      return results
+    }
+
+    for (const endpoint of flightInfo.endpoints) {
+      for await (const data of this.doGet(endpoint.ticket)) {
+        const flightData = data as unknown as { dataHeader?: Uint8Array; dataBody?: Uint8Array }
+        if (flightData.dataHeader && flightData.dataBody) {
+          const batch = parseFlightData(flightData.dataHeader, flightData.dataBody, schema)
+          if (batch) {
+            // Convert batch rows to objects
+            for (let i = 0; i < batch.numRows; i++) {
+              const row: Record<string, unknown> = {}
+              for (const field of schema.fields) {
+                const column = batch.getChild(field.name)
+                row[field.name] = column?.get(i)
+              }
+              results.push(mapper(row))
+            }
+          }
+        }
+      }
+    }
+
+    return results
+  }
+
+  /**
+   * Helper to fetch foreign key results with the complex schema
+   */
+  private async fetchForeignKeyResults(flightInfo: FlightInfo): Promise<ForeignKeyInfo[]> {
+    return this.fetchCatalogResults<ForeignKeyInfo>(flightInfo, (row) => ({
+      pkCatalogName: row["pk_catalog_name"] as string | undefined,
+      pkSchemaName: row["pk_db_schema_name"] as string | undefined,
+      pkTableName: row["pk_table_name"] as string,
+      pkColumnName: row["pk_column_name"] as string,
+      fkCatalogName: row["fk_catalog_name"] as string | undefined,
+      fkSchemaName: row["fk_db_schema_name"] as string | undefined,
+      fkTableName: row["fk_table_name"] as string,
+      fkColumnName: row["fk_column_name"] as string,
+      keySequence: row["key_sequence"] as number,
+      fkKeyName: row["fk_key_name"] as string | undefined,
+      pkKeyName: row["pk_key_name"] as string | undefined,
+      updateRule: row["update_rule"] as number,
+      deleteRule: row["delete_rule"] as number
+    }))
   }
 
   // ===========================================================================
