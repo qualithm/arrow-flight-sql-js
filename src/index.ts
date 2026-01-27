@@ -83,6 +83,25 @@ export {
   withRetry
 } from "./retry"
 
+// Metrics and observability
+export type {
+  CounterEvent,
+  GaugeEvent,
+  MetricEvent,
+  MetricsHandler,
+  OperationStatus,
+  OperationType
+} from "./metrics"
+export {
+  ConsoleMetricsHandler,
+  InMemoryMetricsHandler,
+  MetricNames,
+  MetricsTimer,
+  NoopMetricsHandler,
+  startTimer,
+  withMetrics
+} from "./metrics"
+
 // Type exports
 export type {
   Action,
