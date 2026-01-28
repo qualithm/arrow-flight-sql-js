@@ -5,15 +5,15 @@
     "": {
       "name": "@qualithm/arrow-flight-sql-docs",
       "dependencies": {
-        "@astrojs/mdx": "^4.3.1",
-        "@tailwindcss/vite": "4.1.18",
-        "astro": "^5.16.15",
-        "marked": "^17.0.1",
-        "tailwindcss": "4.1.18",
-        "typescript": "^5.9.3",
+        "@astrojs/mdx": "latest",
+        "@tailwindcss/vite": "latest",
+        "astro": "latest",
+        "marked": "latest",
+        "tailwindcss": "latest",
+        "typescript": "latest",
       },
       "devDependencies": {
-        "@astrojs/check": "^0.9.6",
+        "@astrojs/check": "latest",
       },
     },
   },
