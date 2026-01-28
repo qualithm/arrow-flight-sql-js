@@ -29,6 +29,7 @@
 }
 
 html {
+  color-scheme: light dark;
   scroll-behavior: smooth;
 }
 
@@ -93,8 +94,8 @@ body {
 }
 
 .prose-api pre {
-  background-color: var(--color-zinc-900);
-  border: 1px solid var(--color-zinc-800);
+  background-color: light-dark(var(--color-zinc-100), var(--color-zinc-900));
+  border: 1px solid light-dark(var(--color-zinc-200), var(--color-zinc-800));
   border-radius: 0.5rem;
   padding: 1rem;
   overflow-x: auto;
