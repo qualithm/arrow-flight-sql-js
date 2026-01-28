@@ -12,7 +12,7 @@
   },
   "routes": [
     {
-      "pattern": "docs.qualithm.com/arrow-flight-sql-js",
+      "pattern": "arrow-flight-sql-js.qualithm.com",
       "custom_domain": true
     }
   ]
