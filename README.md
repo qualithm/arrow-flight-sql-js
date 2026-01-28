@@ -1,6 +1,6 @@
 # Arrow Flight SQL JS
 
-A standards-compliant Arrow Flight SQL client for JavaScript/TypeScript.
+Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
 > 📦 **Package:** `@qualithm/arrow-flight-sql`
 >
