@@ -17,6 +17,8 @@ if ("path" in import.meta) {
   rootDir = dirname(fileURLToPath(import.meta.url))
 }
 
+const ignorePatterns = ["dist", "docs/theme", "docs/api", "docs/theme/dist"]
+
 const asRule = (x: readonly ["off" | "warn" | "error", ...unknown[]]) =>
   x as unknown as Linter.RuleEntry
 
@@ -72,60 +74,8 @@ const namingConventionBase = [
   { selector: "default", format: ["camelCase"] }
 ] as const
 
-const namingConventionTsx = [
-  "error",
-
-  { selector: "typeLike", format: ["PascalCase"] },
-  { selector: "typeParameter", format: ["PascalCase"] },
-  { selector: "enum", format: ["PascalCase"] },
-  { selector: "enumMember", format: ["UPPER_CASE"] },
-  { selector: "interface", format: null, custom: { regex: "^I[A-Z]", match: false } },
-
-  { selector: "function", format: ["camelCase", "PascalCase"] },
-  { selector: "method", format: ["camelCase"] },
-  { selector: "accessor", format: ["camelCase"] },
-  { selector: "variable", format: ["camelCase", "PascalCase"] },
-  {
-    selector: "variable",
-    modifiers: ["unused"],
-    leadingUnderscore: "allow",
-    format: ["camelCase", "PascalCase", "UPPER_CASE"]
-  },
-  { selector: "variable", modifiers: ["destructured"], format: null },
-
-  { selector: "parameter", format: ["camelCase"] },
-  {
-    selector: "parameter",
-    modifiers: ["unused"],
-    format: null,
-    filter: { regex: "^_$", match: true }
-  },
-  { selector: "parameterProperty", format: ["camelCase"] },
-
-  { selector: "import", format: ["camelCase", "PascalCase", "UPPER_CASE"] },
-
-  { selector: "objectLiteralProperty", format: ["camelCase", "PascalCase"] },
-  { selector: "objectLiteralProperty", modifiers: ["requiresQuotes"], format: null },
-  { selector: "objectLiteralMethod", format: ["camelCase"] },
-  { selector: "objectLiteralMethod", modifiers: ["requiresQuotes"], format: null },
-
-  { selector: "typeProperty", format: ["camelCase", "PascalCase"] },
-  { selector: "typeProperty", modifiers: ["requiresQuotes"], format: null },
-  {
-    selector: "typeProperty",
-    format: null,
-    filter: { regex: "^[A-Z][A-Z0-9_]*$", match: true }
-  },
-
-  { selector: "property", format: ["camelCase", "PascalCase"] },
-  { selector: "property", modifiers: ["requiresQuotes"], format: null },
-  { selector: "property", format: null, filter: { regex: "^[A-Z][A-Z0-9_]*$", match: true } },
-
-  { selector: "default", format: ["camelCase"] }
-] as const
-
 export default defineConfig([
-  { ignores: ["dist"] },
+  { ignores: ignorePatterns },
 
   {
     extends: [eslint.configs.recommended, ...tseslint.configs.strictTypeChecked],
@@ -169,47 +119,6 @@ export default defineConfig([
             "ECMAScript private identifiers (#name) are disallowed; use standard visibility and camelCase."
         }
       ]
-    }
-  },
-
-  {
-    files: ["**/*.{jsx,tsx}"],
-
-    settings: { react: { version: "detect" } },
-    rules: {
-      "react/jsx-pascal-case": [
-        "error",
-        { allowNamespace: true, allowLeadingUnderscore: false, allowAllCaps: true }
-      ],
-      "react/react-in-jsx-scope": "off",
-
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-
-      "react/jsx-sort-props": [
-        "error",
-        {
-          reservedFirst: true,
-          callbacksLast: true,
-          shorthandFirst: true,
-          ignoreCase: true,
-          noSortAlphabetically: false,
-          multiline: "last"
-        }
-      ]
-    }
-  },
-
-  {
-    files: ["**/*.tsx"],
-    rules: {
-      "@typescript-eslint/naming-convention": asRule(namingConventionTsx)
-    }
-  },
-
-  {
-    files: ["**/*.{test,spec}.{ts,tsx}", "**/*.stories.{ts,tsx}"],
-    rules: {
-      "react-refresh/only-export-components": "off"
     }
   },
 

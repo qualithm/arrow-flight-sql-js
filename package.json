@@ -46,7 +46,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "docs": "typedoc",
+    "docs:build": "bun run docs:theme && typedoc",
+    "docs:serve": "bun --bun x serve docs/api -p 3333",
+    "docs:theme": "tsc -p docs/theme/tsconfig.json",
     "eslint:fix": "eslint --fix .",
     "prepublishOnly": "bun run clean && bun run build",
     "prettier:format": "prettier --write .",

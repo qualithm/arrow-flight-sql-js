@@ -9,12 +9,15 @@
   "excludeProtected": true,
   "excludeInternal": true,
   "excludeExternals": true,
+  "customCss": "docs/custom.css",
+  "plugin": ["./docs/theme/dist/index.js"],
+  "theme": "qualithm",
   "navigationLinks": {
+    "Qualithm": "https://qualithm.com",
     "GitHub": "https://github.com/qualithm/arrow-flight-sql-js",
     "npm": "https://www.npmjs.com/package/@qualithm/arrow-flight-sql"
   },
   "githubPages": true,
-  "plugin": [],
   "searchInComments": true,
   "categorizeByGroup": true,
   "sort": ["alphabetical"],
