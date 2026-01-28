@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { Link, NavLink } from "react-router-dom"
+import { Link } from "react-router-dom"
 
 import useOutsideClick from "../hook/useOutsideClick"
-import Logo from "./Logo"
+// import Logo from "./Logo"
 
 function Header() {
   const [menu, setMenu] = useState<string | null>(null)
@@ -32,22 +32,17 @@ function Header() {
     >
       <div className="flex-1">
         <Link
-          className="pill-md pill-glass self-start"
-          to={import.meta.env.VITE_URI_DOCS}
+          className="pill-md pill-glass self-start text-[var(--fg-bright)]"
+          to={import.meta.env.VITE_URI_BASE}
           onClick={closeMenu}
         >
-          <span className="inline-flex items-center">
-            <Logo className="size-8" />
-            &zwnj;
+          <span className="inline-flex items-center font-bold gap-2 ">
+            {/* <Logo className="size-8" /> */}
+            Arrow Flight SQL JS
           </span>
         </Link>
       </div>
       <div className="flex-row items-center gap-6">
-        <Link className="pill-md pill-glass text-2xl" to={import.meta.env.VITE_URI_APP}>
-          <span className="inline-flex items-center">
-            <span className="material-symbol">login</span>&zwnj;
-          </span>
-        </Link>
         <button
           className="pill-md pill-glass data-[active=true]:bg-glass-extreme text-2xl text-[var(--fg-bright)]"
           data-active={menu === "main" ? "true" : "false"}
@@ -69,32 +64,9 @@ function Header() {
               e.stopPropagation()
             }}
           >
-            <nav className="gap-2 px-3">
-              <Link
-                className="pill-md pill-ghost"
-                to={`${import.meta.env.VITE_URI_SITE}/pricing`}
-                onClick={closeMenu}
-              >
-                Pricing <span className="material-symbol">arrow_outward</span>
-              </Link>
-              <Link
-                className="pill-md pill-ghost"
-                to={`${import.meta.env.VITE_URI_SITE}/support`}
-                onClick={closeMenu}
-              >
-                Support <span className="material-symbol">arrow_outward</span>
-              </Link>
-            </nav>
+            <nav className="gap-2 px-3">{/* TODO: Add more menu items here */}</nav>
             <hr />
-            <nav className="gap-2 px-3">
-              <NavLink
-                className="pill-md pill-ghost"
-                to={import.meta.env.VITE_URI_DOCS}
-                onClick={closeMenu}
-              >
-                Documentation <span className="material-symbol">chevron_right</span>
-              </NavLink>
-            </nav>
+            <nav className="gap-2 px-3">{/* TODO: Add more menu items here */}</nav>
           </div>
         </div>
       )}

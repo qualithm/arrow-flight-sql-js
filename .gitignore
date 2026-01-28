@@ -1,12 +1,9 @@
 .DS_Store
-dist
-node_modules
-
-# Downloaded proto files (regenerate with: bun run proto:generate)
+.wrangler/
+.env*
+app-md/
+data/
+dist/
+node_modules/
 proto/
-
-# Generated documentation (regenerate with: bun run docs:build)
-docs/api-md/
-docs/dist/
-docs/node_modules/
-docs/.astro/
+worker-configuration.d.ts
