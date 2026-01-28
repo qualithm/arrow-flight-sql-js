@@ -23,15 +23,19 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - run: bun install --frozen-lockfile
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
 
-      - name: Generate TypeDoc
+      - name: Install docs dependencies
+        run: cd docs && bun install
+
+      - name: Generate API docs and build site
         run: bun run docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/api
+          path: docs/dist
 
   deploy:
     name: Deploy to GitHub Pages

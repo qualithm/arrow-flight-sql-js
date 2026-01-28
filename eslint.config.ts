@@ -17,7 +17,7 @@ if ("path" in import.meta) {
   rootDir = dirname(fileURLToPath(import.meta.url))
 }
 
-const ignorePatterns = ["dist", "docs/theme", "docs/api", "docs/theme/dist"]
+const ignorePatterns = ["dist", "docs"]
 
 const asRule = (x: readonly ["off" | "warn" | "error", ...unknown[]]) =>
   x as unknown as Linter.RuleEntry

@@ -6,5 +6,7 @@ node_modules
 proto/
 
 # Generated documentation (regenerate with: bun run docs:build)
-docs/api/
-docs/theme/dist/
+docs/api-md/
+docs/dist/
+docs/node_modules/
+docs/.astro/

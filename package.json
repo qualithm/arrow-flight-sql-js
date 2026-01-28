@@ -46,9 +46,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "docs:build": "bun run docs:theme && typedoc",
-    "docs:serve": "bun --bun x serve docs/api -p 3333",
-    "docs:theme": "tsc -p docs/theme/tsconfig.json",
+    "docs:api": "typedoc",
+    "docs:build": "bun run docs:api && cd docs && bun run build",
+    "docs:dev": "cd docs && bun run dev",
+    "docs:preview": "cd docs && bun run preview",
     "eslint:fix": "eslint --fix .",
     "prepublishOnly": "bun run clean && bun run build",
     "prettier:format": "prettier --write .",
@@ -77,6 +78,7 @@
     "jiti": "2.6.1",
     "prettier": "3.8.1",
     "typedoc": "0.27.9",
+    "typedoc-plugin-markdown": "4.2.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.53.1"
   }

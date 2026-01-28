@@ -1,0 +1,61 @@
+---
+import { readdir, readFile } from "node:fs/promises"
+import { basename, join } from "node:path"
+import { marked } from "marked"
+import Docs from "../../layouts/Docs.astro"
+
+export async function getStaticPaths() {
+  // Resolve the api-md directory relative to the docs folder
+  const docsRoot = new URL("../../..", import.meta.url).pathname
+  const apiDir = join(docsRoot, "api-md")
+  const paths: { params: { slug: string }; props: { content: string; title: string } }[] = []
+
+  async function walkDir(dir: string, basePath = "") {
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name
+
+      if (entry.isDirectory()) {
+        await walkDir(fullPath, relativePath)
+      } else if (entry.name.endsWith(".md")) {
+        const markdown = await readFile(fullPath, "utf-8")
+        const html = await marked(markdown)
+        const slug = relativePath.replace(/\.md$/, "")
+        const title = extractTitle(markdown) || basename(entry.name, ".md")
+
+        paths.push({
+          params: { slug },
+          props: { content: html, title }
+        })
+      }
+    }
+  }
+
+  function extractTitle(content: string): string | null {
+    const match = content.match(/^#\s+(.+)$/m)
+    return match ? match[1].replace(/`/g, "") : null
+  }
+
+  await walkDir(apiDir)
+
+  return paths
+}
+
+interface Props {
+  content: string
+  title: string
+}
+
+const { content, title } = Astro.props
+---
+
+<Docs title={title}>
+  <div class="prose-api" set:html={content} />
+</Docs>

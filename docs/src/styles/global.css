@@ -1,0 +1,142 @@
+@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
+@import "tailwindcss";
+
+@theme {
+  --bg-bright: light-dark(var(--color-zinc-100), var(--color-zinc-900));
+  --bg: light-dark(var(--color-zinc-200), var(--color-zinc-800));
+  --bg-dim: light-dark(var(--color-zinc-300), var(--color-zinc-700));
+
+  --surface-bright: light-dark(var(--color-zinc-50), var(--color-zinc-950));
+  --surface: light-dark(var(--color-zinc-100), var(--color-zinc-900));
+  --surface-dim: light-dark(var(--color-zinc-200), var(--color-zinc-800));
+
+  --fg-bright: light-dark(var(--color-zinc-900), var(--color-zinc-100));
+  --fg: light-dark(var(--color-zinc-700), var(--color-zinc-300));
+  --fg-dim: light-dark(var(--color-zinc-600), var(--color-zinc-400));
+
+  --border-bright: light-dark(var(--color-zinc-500), var(--color-zinc-500));
+  --border: light-dark(var(--color-zinc-400), var(--color-zinc-600));
+  --border-dim: light-dark(var(--color-zinc-300), var(--color-zinc-700));
+
+  --ring: light-dark(var(--color-blue-600), var(--color-blue-400));
+  --link: light-dark(var(--color-blue-600), var(--color-blue-400));
+
+  --code-bg: light-dark(var(--color-zinc-100), var(--color-zinc-800));
+  --code-border: light-dark(var(--color-zinc-200), var(--color-zinc-700));
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--surface-bright);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prose styling for markdown content */
+.prose-api h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+  border-bottom: 1px solid var(--border-dim);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.prose-api h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--fg-bright);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  scroll-margin-top: 5rem;
+}
+
+.prose-api h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--fg-bright);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 5rem;
+}
+
+.prose-api p {
+  margin-bottom: 1rem;
+  line-height: 1.75;
+}
+
+.prose-api ul,
+.prose-api ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.prose-api li {
+  margin-bottom: 0.5rem;
+}
+
+.prose-api code:not(pre code) {
+  background-color: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+}
+
+.prose-api pre {
+  background-color: var(--color-zinc-900);
+  border: 1px solid var(--color-zinc-800);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+.prose-api pre code {
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  line-height: 1.7;
+}
+
+.prose-api a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.prose-api a:hover {
+  text-decoration: underline;
+}
+
+.prose-api table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.prose-api th,
+.prose-api td {
+  border: 1px solid var(--border-dim);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.prose-api th {
+  background-color: var(--surface-dim);
+  font-weight: 600;
+  color: var(--fg-bright);
+}
+
+.prose-api strong {
+  color: var(--fg-bright);
+  font-weight: 600;
+}
