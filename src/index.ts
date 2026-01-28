@@ -1,11 +1,11 @@
 /**
- * @qualithm/arrow-flight-sql
+ * @qualithm/arrow-flight-sql-js
  *
  * A standards-compliant Arrow Flight SQL client for JavaScript/TypeScript.
  *
  * @example
  * ```typescript
- * import { FlightSqlClient } from "@qualithm/arrow-flight-sql"
+ * import { FlightSqlClient } from "@qualithm/arrow-flight-sql-js"
  *
  * const client = new FlightSqlClient({
  *   host: "localhost",

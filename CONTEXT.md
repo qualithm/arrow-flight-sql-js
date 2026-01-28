@@ -100,7 +100,7 @@ The project has a complete, production-ready Arrow Flight SQL client:
 | L3  | Zero runtime dependencies where possible       | Minimize bundle size, reduce supply chain risk                 |
 | L4  | Model API on official Arrow Flight SQL clients | Consistency with ecosystem, proven patterns                    |
 | L5  | Streaming-first design                         | Arrow Flight is inherently streaming; batch is a special case  |
-| L6  | Publish as `@qualithm/arrow-flight-sql`        | Scoped package under Qualithm organization                     |
+| L6  | Publish as `@qualithm/arrow-flight-sql-js`        | Scoped package under Qualithm organization                     |
 | L7  | Server-agnostic implementation                 | Must work with any Flight SQL server, not just Qualithm        |
 | L8  | Use `@grpc/grpc-js` for gRPC transport         | Mature, well-maintained, Node.js native gRPC implementation    |
 | L9  | Generate types from official .proto files      | Ensures protocol compliance, tracks upstream changes           |
@@ -185,7 +185,7 @@ The project has a complete, production-ready Arrow Flight SQL client:
 - [x] Verify interop with lakehouse server (connection, error handling working)
 - [x] npm package configuration (package.json, tsconfig.build.json, LICENSE)
 - [x] Build system for distribution (`bun run build` → `dist/`)
-- [ ] Publish `@qualithm/arrow-flight-sql` to npm (blocked: npm auth)
+- [ ] Publish `@qualithm/arrow-flight-sql-js` to npm (blocked: npm auth)
 - [x] TypeDoc API documentation generation (`bun run docs` → `docs/api/`)
 - [x] GitHub Pages deployment workflow (`.github/workflows/docs.yaml`)
 
@@ -221,7 +221,7 @@ subscribe to live data streams.
 **API Design:**
 
 ```typescript
-import { FlightSqlClient } from "@qualithm/arrow-flight-sql"
+import { FlightSqlClient } from "@qualithm/arrow-flight-sql-js"
 
 const client = new FlightSqlClient({ host: "localhost", port: 50051 })
 await client.connect()

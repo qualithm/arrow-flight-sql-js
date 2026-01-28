@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { FlightSqlClient, ConsoleMetricsHandler } from "@qualithm/arrow-flight-sql"
+ * import { FlightSqlClient, ConsoleMetricsHandler } from "@qualithm/arrow-flight-sql-js"
  *
  * const client = new FlightSqlClient({
  *   host: "localhost",

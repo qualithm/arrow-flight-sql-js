@@ -2,7 +2,7 @@
 
 Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
-> 📦 **Package:** `@qualithm/arrow-flight-sql`
+> 📦 **Package:** `@qualithm/arrow-flight-sql-js`
 >
 > 📚 **[API Documentation](https://qualithm.github.io/arrow-flight-sql-js/)**
 
@@ -33,19 +33,19 @@ We aim for **API parity** with the official clients where JavaScript idioms allo
 
 ```bash
 # npm
-npm install @qualithm/arrow-flight-sql
+npm install @qualithm/arrow-flight-sql-js
 
 # bun
-bun add @qualithm/arrow-flight-sql
+bun add @qualithm/arrow-flight-sql-js
 
 # pnpm
-pnpm add @qualithm/arrow-flight-sql
+pnpm add @qualithm/arrow-flight-sql-js
 ```
 
 ## Quick Start
 
 ```typescript
-import { FlightSqlClient } from "@qualithm/arrow-flight-sql"
+import { FlightSqlClient } from "@qualithm/arrow-flight-sql-js"
 
 // Create a client
 const client = new FlightSqlClient({
@@ -71,7 +71,7 @@ await client.close()
 ## Connection Pooling
 
 ```typescript
-import { FlightSqlPool } from "@qualithm/arrow-flight-sql"
+import { FlightSqlPool } from "@qualithm/arrow-flight-sql-js"
 
 const pool = new FlightSqlPool({
   host: "localhost",
@@ -112,7 +112,7 @@ import {
   InMemoryMetricsHandler,
   MetricNames,
   type MetricsHandler
-} from "@qualithm/arrow-flight-sql"
+} from "@qualithm/arrow-flight-sql-js"
 
 // Console handler for development
 const client = new FlightSqlClient({
@@ -178,7 +178,7 @@ import {
   ProtocolError, // Protocol/encoding issues
   NotFoundError, // Resource not found
   CancelledError // Operation cancelled
-} from "@qualithm/arrow-flight-sql"
+} from "@qualithm/arrow-flight-sql-js"
 
 try {
   await client.execute("SELECT * FROM missing_table")
@@ -199,7 +199,7 @@ try {
 Configure automatic retries for transient failures:
 
 ```typescript
-import { FlightSqlClient, RetryPolicy, retryPolicies } from "@qualithm/arrow-flight-sql"
+import { FlightSqlClient, RetryPolicy, retryPolicies } from "@qualithm/arrow-flight-sql-js"
 
 // Use pre-configured policies
 const client = new FlightSqlClient({
