@@ -100,7 +100,7 @@ The project has a complete, production-ready Arrow Flight SQL client:
 | L3  | Zero runtime dependencies where possible       | Minimize bundle size, reduce supply chain risk                 |
 | L4  | Model API on official Arrow Flight SQL clients | Consistency with ecosystem, proven patterns                    |
 | L5  | Streaming-first design                         | Arrow Flight is inherently streaming; batch is a special case  |
-| L6  | Publish as `@qualithm/arrow-flight-sql-js`        | Scoped package under Qualithm organization                     |
+| L6  | Publish as `@qualithm/arrow-flight-sql-js`     | Scoped package under Qualithm organization                     |
 | L7  | Server-agnostic implementation                 | Must work with any Flight SQL server, not just Qualithm        |
 | L8  | Use `@grpc/grpc-js` for gRPC transport         | Mature, well-maintained, Node.js native gRPC implementation    |
 | L9  | Generate types from official .proto files      | Ensures protocol compliance, tracks upstream changes           |
