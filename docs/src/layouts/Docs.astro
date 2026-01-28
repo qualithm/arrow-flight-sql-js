@@ -2,6 +2,7 @@
 import Base from "./Base.astro"
 import Header from "../components/Header.astro"
 import Sidebar from "../components/Sidebar.astro"
+import Footer from "../components/Footer.astro"
 
 interface Props {
   title: string
@@ -13,12 +14,13 @@ const { title, description } = Astro.props
 
 <Base title={title} description={description}>
   <Header />
-  <div class="flex flex-1">
+  <div class="flex flex-1 flex-row justify-start">
     <Sidebar />
-    <main class="flex-1 px-8 py-6 lg:pl-72">
-      <article class="prose-api max-w-4xl mx-auto">
+    <main class="safe-x-4 md:safe-x-6 flex-1 justify-start">
+      <article class="prose-api mx-auto w-full max-w-3xl justify-start [&_div]:justify-start">
         <slot />
       </article>
     </main>
   </div>
+  <Footer />
 </Base>

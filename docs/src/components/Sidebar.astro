@@ -15,44 +15,34 @@ const sections = [
     items: [
       { title: "Overview", href: `${base}api/` },
       { title: "FlightSqlClient", href: `${base}api/classes/FlightSqlClient/` },
-      { title: "ConnectionPool", href: `${base}api/classes/ConnectionPool/` }
-    ]
-  },
-  {
-    title: "Guides",
-    items: [
-      { title: "Connection Pooling", href: `${base}guides/pooling/` },
-      { title: "Error Handling", href: `${base}guides/errors/` },
-      { title: "Retry Strategies", href: `${base}guides/retry/` }
+      { title: "FlightSqlPool", href: `${base}api/classes/FlightSqlPool/` },
+      { title: "RetryPolicy", href: `${base}api/classes/RetryPolicy/` }
     ]
   }
 ]
 ---
 
 <aside
-  class="fixed left-0 top-16 z-40 hidden h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-[var(--border-dim)] bg-[var(--surface-bright)] px-4 py-6 lg:block"
+  class="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 justify-start self-start overflow-y-auto border-r border-[var(--border-dim)] lg:block"
 >
-  <nav class="space-y-6">
-    {
-      sections.map((section) => (
-        <div>
-          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--fg-dim)]">
-            {section.title}
-          </h3>
-          <ul class="space-y-1">
-            {section.items.map((item) => (
-              <li>
-                <a
-                  href={item.href}
-                  class="block rounded-md px-3 py-2 text-sm text-[var(--fg)] hover:bg-[var(--surface-dim)] hover:text-[var(--fg-bright)] transition-colors"
-                >
+  <div class="justify-start py-6">
+    <nav class="justify-start gap-6 px-4">
+      {
+        sections.map((section) => (
+          <div class="gap-2">
+            <h4 class="px-3 text-xs font-semibold uppercase tracking-wider text-[var(--fg-dim)]">
+              {section.title}
+            </h4>
+            <div class="gap-1">
+              {section.items.map((item) => (
+                <a class="pill-md pill-ghost justify-start" href={item.href}>
                   {item.title}
                 </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))
-    }
-  </nav>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </nav>
+  </div>
 </aside>

@@ -54,8 +54,15 @@ interface Props {
 }
 
 const { content, title } = Astro.props
+const base = import.meta.env.BASE_URL
 ---
 
 <Docs title={title}>
   <div class="prose-api" set:html={content} />
+  <hr class="loose" />
+  <p class="text-center">
+    <a class="pill-md pill-ghost" href={`${base}api/`}>
+      <span class="material-symbol">chevron_left</span> Back to API Reference
+    </a>
+  </p>
 </Docs>
