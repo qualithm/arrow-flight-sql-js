@@ -1,9 +1,10 @@
 # Arrow Flight SQL JS
 
-A standards-compliant [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
-client for JavaScript and TypeScript.
+Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
-> ⚠️ **Status: In Development** – Not yet ready for production use.
+> 📦 **Package:** `@qualithm/arrow-flight-sql`
+>
+> 📚 **[API Documentation](https://qualithm.github.io/arrow-flight-sql-js/)**
 
 ## Overview
 
@@ -32,19 +33,19 @@ We aim for **API parity** with the official clients where JavaScript idioms allo
 
 ```bash
 # npm
-npm install arrow-flight-sql-js
+npm install @qualithm/arrow-flight-sql
 
 # bun
-bun add arrow-flight-sql-js
+bun add @qualithm/arrow-flight-sql
 
 # pnpm
-pnpm add arrow-flight-sql-js
+pnpm add @qualithm/arrow-flight-sql
 ```
 
 ## Quick Start
 
 ```typescript
-import { FlightSqlClient } from "arrow-flight-sql-js"
+import { FlightSqlClient } from "@qualithm/arrow-flight-sql"
 
 // Create a client
 const client = new FlightSqlClient({
@@ -70,7 +71,7 @@ await client.close()
 ## Connection Pooling
 
 ```typescript
-import { FlightSqlPool } from "arrow-flight-sql-js"
+import { FlightSqlPool } from "@qualithm/arrow-flight-sql"
 
 const pool = new FlightSqlPool({
   host: "localhost",
@@ -95,6 +96,204 @@ try {
 const results = await pool.withClient(async (client) => {
   return client.execute("SELECT * FROM users")
 })
+
+// Graceful shutdown
+await pool.close()
+```
+
+## Observability & Metrics
+
+Integrate with your observability stack using the metrics handler interface:
+
+```typescript
+import {
+  FlightSqlClient,
+  ConsoleMetricsHandler,
+  InMemoryMetricsHandler,
+  MetricNames,
+  type MetricsHandler
+} from "@qualithm/arrow-flight-sql"
+
+// Console handler for development
+const client = new FlightSqlClient({
+  host: "localhost",
+  port: 31337,
+  metrics: new ConsoleMetricsHandler()
+})
+// Output: [FlightSQL Metrics] ✓ query success (42ms)
+
+// In-memory handler for testing
+const metricsHandler = new InMemoryMetricsHandler()
+const testClient = new FlightSqlClient({
+  host: "localhost",
+  port: 31337,
+  metrics: metricsHandler
+})
+
+// Query metrics after operations
+await testClient.execute("SELECT 1")
+console.log(metricsHandler.getAverageDuration("query"))
+console.log(metricsHandler.getErrorRate("query"))
+console.log(metricsHandler.getSummary())
+
+// Custom handler for OpenTelemetry, Prometheus, etc.
+class OpenTelemetryHandler implements MetricsHandler {
+  recordOperation(event) {
+    // Record to your tracing/metrics backend
+    tracer.startSpan(event.operation).end()
+    histogram.record(event.durationMs, { operation: event.operation })
+  }
+  recordGauge(event) {
+    /* ... */
+  }
+  recordCounter(event) {
+    /* ... */
+  }
+}
+```
+
+### Standard Metric Names
+
+Use `MetricNames` for consistent metric naming:
+
+```typescript
+MetricNames.poolTotalConnections // "flight_sql.pool.total_connections"
+MetricNames.poolActiveConnections // "flight_sql.pool.active_connections"
+MetricNames.queriesExecuted // "flight_sql.queries.executed"
+MetricNames.bytesReceived // "flight_sql.bytes.received"
+MetricNames.retriesAttempted // "flight_sql.retries.attempted"
+```
+
+## Error Handling
+
+The library provides a comprehensive error hierarchy:
+
+```typescript
+import {
+  FlightSqlError, // Base error class
+  ConnectionError, // Network/connection issues
+  AuthenticationError, // Auth failures (401, 403)
+  QueryError, // SQL syntax or execution errors
+  TimeoutError, // Operation timeouts
+  ProtocolError, // Protocol/encoding issues
+  NotFoundError, // Resource not found
+  CancelledError // Operation cancelled
+} from "@qualithm/arrow-flight-sql"
+
+try {
+  await client.execute("SELECT * FROM missing_table")
+} catch (error) {
+  if (error instanceof QueryError) {
+    console.error("SQL Error:", error.message)
+    console.error("SQL State:", error.sqlState)
+  } else if (error instanceof ConnectionError) {
+    console.error("Connection lost, will retry...")
+  } else if (error instanceof TimeoutError) {
+    console.error(`Operation timed out after ${error.timeoutMs}ms`)
+  }
+}
+```
+
+## Retry Configuration
+
+Configure automatic retries for transient failures:
+
+```typescript
+import { FlightSqlClient, RetryPolicy, retryPolicies } from "@qualithm/arrow-flight-sql"
+
+// Use pre-configured policies
+const client = new FlightSqlClient({
+  host: "localhost",
+  port: 31337,
+  retry: retryPolicies.default // 3 retries, exponential backoff
+})
+
+// Available policies
+retryPolicies.none // No retries
+retryPolicies.fast // 3 retries, 50ms initial, 500ms max
+retryPolicies.default // 3 retries, 100ms initial, 10s max
+retryPolicies.aggressive // 5 retries, 200ms initial, 30s max
+retryPolicies.reconnection // 10 retries, 1s initial, 60s max
+
+// Custom retry configuration
+const customPolicy = new RetryPolicy({
+  maxRetries: 5,
+  initialDelayMs: 100,
+  maxDelayMs: 5000,
+  backoffMultiplier: 2,
+  jitter: true, // Adds ±25% variance to prevent thundering herd
+  isRetryable: (error) => {
+    // Custom logic for which errors to retry
+    return error.code === 14 || error.message.includes("timeout")
+  }
+})
+
+const clientWithCustomRetry = new FlightSqlClient({
+  host: "localhost",
+  port: 31337,
+  retry: customPolicy
+})
+```
+
+## Catalog Introspection
+
+Explore database metadata with the catalog API:
+
+```typescript
+// List all catalogs
+const catalogs = await client.getCatalogs()
+console.log("Catalogs:", catalogs)
+
+// List schemas in a catalog
+const schemas = await client.getSchemas("my_catalog", "public%")
+
+// List tables with filtering
+const tables = await client.getTables({
+  catalog: "my_catalog",
+  dbSchemaFilterPattern: "public",
+  tableNameFilterPattern: "user%",
+  tableTypes: ["TABLE", "VIEW"],
+  includeSchema: true // Include Arrow schema for each table
+})
+
+// Get table types supported by the server
+const tableTypes = await client.getTableTypes()
+// ["TABLE", "VIEW", "SYSTEM TABLE", "TEMPORARY TABLE", ...]
+
+// Get primary key information
+const primaryKeys = await client.getPrimaryKeys("users", "my_catalog", "public")
+for (const pk of primaryKeys) {
+  console.log(`Column ${pk.columnName} at position ${pk.keySequence}`)
+}
+
+// Get foreign key relationships
+const exportedKeys = await client.getExportedKeys("users") // Keys referencing this table
+const importedKeys = await client.getImportedKeys("orders") // Keys this table references
+```
+
+## Prepared Statements
+
+Use prepared statements for parameterized queries:
+
+```typescript
+// Create a prepared statement
+const stmt = await client.prepare("SELECT * FROM users WHERE id = ? AND status = ?")
+
+try {
+  // Bind parameters and execute
+  const stream = await stmt.execute([userId, "active"])
+
+  for await (const batch of stream) {
+    console.log(`Received ${batch.numRows} rows`)
+  }
+
+  // Execute again with different parameters
+  const stream2 = await stmt.execute([otherUserId, "pending"])
+  // ...
+} finally {
+  // Always close prepared statements
+  await stmt.close()
+}
 ```
 
 ## API Reference
@@ -128,9 +327,11 @@ The main client for interacting with Flight SQL servers.
 
 - `getCatalogs(): Promise<string[]>` – List available catalogs
 - `getSchemas(catalog?, schemaPattern?): Promise<Schema[]>` – List schemas
-- `getTables(catalog?, schema?, tablePattern?): Promise<Table[]>` – List tables
+- `getTables(options?): Promise<Table[]>` – List tables with filters
 - `getTableTypes(): Promise<string[]>` – List table type names
-- `getPrimaryKeys(catalog, schema, table): Promise<PrimaryKey[]>` – Get primary keys
+- `getPrimaryKeys(table, catalog?, schema?): Promise<PrimaryKey[]>` – Get primary keys
+- `getExportedKeys(table, catalog?, schema?): Promise<ForeignKey[]>` – Get exported foreign keys
+- `getImportedKeys(table, catalog?, schema?): Promise<ForeignKey[]>` – Get imported foreign keys
 
 ##### Low-Level Flight Operations
 

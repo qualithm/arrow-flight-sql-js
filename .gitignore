@@ -1,3 +1,12 @@
 .DS_Store
 dist
 node_modules
+
+# Downloaded proto files (regenerate with: bun run proto:generate)
+proto/
+
+# Generated documentation (regenerate with: bun run docs:build)
+docs/api-md/
+docs/dist/
+docs/node_modules/
+docs/.astro/

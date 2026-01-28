@@ -1,0 +1,112 @@
+---
+import Docs from "../../layouts/Docs.astro"
+
+const base = import.meta.env.BASE_URL
+---
+
+<Docs title="API Reference">
+  <h1>API Reference</h1>
+
+  <p class="lead text-xl text-[var(--fg-dim)]">
+    Complete API documentation for @qualithm/arrow-flight-sql.
+  </p>
+
+  <h2>Classes</h2>
+  <ul class="not-prose grid gap-4 sm:grid-cols-2">
+    <li>
+      <a
+        href={`${base}api/classes/FlightSqlClient/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">FlightSqlClient</h3>
+        <p class="text-sm text-[var(--fg-dim)]">
+          Main client for executing Flight SQL operations.
+        </p>
+      </a>
+    </li>
+    <li>
+      <a
+        href={`${base}api/classes/ConnectionPool/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">ConnectionPool</h3>
+        <p class="text-sm text-[var(--fg-dim)]">
+          Connection pool for managing multiple client connections.
+        </p>
+      </a>
+    </li>
+    <li>
+      <a
+        href={`${base}api/classes/RetryPolicy/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">RetryPolicy</h3>
+        <p class="text-sm text-[var(--fg-dim)]">
+          Configurable retry policy with exponential backoff.
+        </p>
+      </a>
+    </li>
+  </ul>
+
+  <h2>Interfaces</h2>
+  <ul class="not-prose grid gap-4 sm:grid-cols-2">
+    <li>
+      <a
+        href={`${base}api/interfaces/FlightSqlClientOptions/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">FlightSqlClientOptions</h3>
+        <p class="text-sm text-[var(--fg-dim)]">Configuration options for the client.</p>
+      </a>
+    </li>
+    <li>
+      <a
+        href={`${base}api/interfaces/RetryOptions/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">RetryOptions</h3>
+        <p class="text-sm text-[var(--fg-dim)]">Options for configuring retry behavior.</p>
+      </a>
+    </li>
+    <li>
+      <a
+        href={`${base}api/interfaces/MetricsHandler/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">MetricsHandler</h3>
+        <p class="text-sm text-[var(--fg-dim)]">Interface for custom metrics collection.</p>
+      </a>
+    </li>
+  </ul>
+
+  <h2>Error Classes</h2>
+  <ul class="not-prose grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <li>
+      <a
+        href={`${base}api/classes/FlightSqlError/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">FlightSqlError</h3>
+        <p class="text-sm text-[var(--fg-dim)]">Base error class.</p>
+      </a>
+    </li>
+    <li>
+      <a
+        href={`${base}api/classes/ConnectionError/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">ConnectionError</h3>
+        <p class="text-sm text-[var(--fg-dim)]">Connection failures.</p>
+      </a>
+    </li>
+    <li>
+      <a
+        href={`${base}api/classes/QueryError/`}
+        class="block rounded-lg border border-[var(--border-dim)] p-4 hover:border-[var(--link)] hover:bg-[var(--surface-dim)] transition-colors"
+      >
+        <h3 class="font-semibold text-[var(--fg-bright)]">QueryError</h3>
+        <p class="text-sm text-[var(--fg-dim)]">Query execution errors.</p>
+      </a>
+    </li>
+  </ul>
+</Docs>

@@ -1,0 +1,45 @@
+---
+const base = import.meta.env.BASE_URL
+---
+
+<header class="sticky top-0 z-50 w-full border-b border-[var(--border-dim)] bg-[var(--surface-bright)]/80 backdrop-blur-sm">
+  <div class="flex h-16 items-center justify-between px-6">
+    <a href={base} class="flex items-center gap-3 font-semibold text-lg text-[var(--fg-bright)]">
+      <svg class="h-8 w-8 text-[var(--link)]" viewBox="0 0 32 32" fill="none">
+        <path
+          d="M16 2L4 8v16l12 6 12-6V8L16 2z"
+          stroke="currentColor"
+          stroke-width="2"
+          fill="none"
+        />
+        <path d="M16 10l6 3v6l-6 3-6-3v-6l6-3z" fill="currentColor" />
+      </svg>
+      <span>@qualithm/arrow-flight-sql</span>
+    </a>
+
+    <nav class="flex items-center gap-6">
+      <a
+        href={`${base}api/`}
+        class="text-sm text-[var(--fg-dim)] hover:text-[var(--fg-bright)] transition-colors"
+      >
+        API Reference
+      </a>
+      <a
+        href="https://github.com/qualithm/arrow-flight-sql-js"
+        class="text-sm text-[var(--fg-dim)] hover:text-[var(--fg-bright)] transition-colors"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        GitHub
+      </a>
+      <a
+        href="https://www.npmjs.com/package/@qualithm/arrow-flight-sql"
+        class="text-sm text-[var(--fg-dim)] hover:text-[var(--fg-bright)] transition-colors"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        npm
+      </a>
+    </nav>
+  </div>
+</header>

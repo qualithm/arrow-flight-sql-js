@@ -1,0 +1,58 @@
+---
+const base = import.meta.env.BASE_URL
+
+const sections = [
+  {
+    title: "Getting Started",
+    items: [
+      { title: "Introduction", href: `${base}` },
+      { title: "Installation", href: `${base}#installation` },
+      { title: "Quick Start", href: `${base}#quick-start` }
+    ]
+  },
+  {
+    title: "API Reference",
+    items: [
+      { title: "Overview", href: `${base}api/` },
+      { title: "FlightSqlClient", href: `${base}api/classes/FlightSqlClient/` },
+      { title: "ConnectionPool", href: `${base}api/classes/ConnectionPool/` }
+    ]
+  },
+  {
+    title: "Guides",
+    items: [
+      { title: "Connection Pooling", href: `${base}guides/pooling/` },
+      { title: "Error Handling", href: `${base}guides/errors/` },
+      { title: "Retry Strategies", href: `${base}guides/retry/` }
+    ]
+  }
+]
+---
+
+<aside
+  class="fixed left-0 top-16 z-40 hidden h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-[var(--border-dim)] bg-[var(--surface-bright)] px-4 py-6 lg:block"
+>
+  <nav class="space-y-6">
+    {
+      sections.map((section) => (
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--fg-dim)]">
+            {section.title}
+          </h3>
+          <ul class="space-y-1">
+            {section.items.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class="block rounded-md px-3 py-2 text-sm text-[var(--fg)] hover:bg-[var(--surface-dim)] hover:text-[var(--fg-bright)] transition-colors"
+                >
+                  {item.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </nav>
+</aside>

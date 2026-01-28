@@ -1,0 +1,362 @@
+/**
+ * Integration tests for Arrow Flight SQL client with Qualithm Lakehouse
+ *
+ * These tests require a running lakehouse cluster:
+ *   cd lakehouse/docker && docker compose -f docker-compose.cluster.yaml up -d
+ *
+ * Environment variables:
+ *   FLIGHT_SQL_HOST - Server hostname (default: localhost)
+ *   FLIGHT_SQL_PORT - Server port (default: 8815)
+ *   FLIGHT_SQL_TLS - Enable TLS (default: false)
+ *   FLIGHT_SQL_USERNAME - Auth username (default: admin)
+ *   FLIGHT_SQL_PASSWORD - Auth password (default: lakehouse)
+ *   SKIP_INTEGRATION_TESTS - Skip all integration tests (default: false)
+ *
+ * Note: Some tests may fail if the lakehouse server doesn't support all
+ * Flight SQL features (prepared statements, catalog introspection commands).
+ */
+
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+
+import type { FlightSqlClient } from "../../client"
+import { createTestClient, getTestConfig, skipIfNoIntegration } from "../setup"
+
+describe("Lakehouse Integration", () => {
+  const config = getTestConfig()
+  let client!: FlightSqlClient
+
+  beforeAll(async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    client = createTestClient()
+    try {
+      await client.connect()
+    } catch (error) {
+      console.error("Failed to connect to lakehouse:", error)
+      console.error(`  Host: ${config.host}:${String(config.port)}`)
+      console.error("  Ensure lakehouse cluster is running:")
+      console.error(
+        "    cd lakehouse/docker && docker compose -f docker-compose.cluster.yaml up -d"
+      )
+      throw error
+    }
+  })
+
+  afterAll(() => {
+    client.close()
+  })
+
+  // ==========================================================================
+  // Connection Tests
+  // ==========================================================================
+
+  describe("Connection", () => {
+    test("should connect with valid credentials", () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      expect(client.isConnected()).toBe(true)
+    })
+
+    test("should fail with invalid credentials", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const badClient = createTestClient({
+        auth: { type: "basic", username: "invalid", password: "wrong" }
+      })
+
+      let threw = false
+      try {
+        await badClient.connect()
+      } catch {
+        threw = true
+      }
+      expect(threw).toBe(true)
+      badClient.close()
+    })
+
+    test("should reconnect after close", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const tempClient = createTestClient()
+      await tempClient.connect()
+      expect(tempClient.isConnected()).toBe(true)
+
+      tempClient.close()
+      expect(tempClient.isConnected()).toBe(false)
+
+      await tempClient.connect()
+      expect(tempClient.isConnected()).toBe(true)
+
+      tempClient.close()
+    })
+  })
+
+  // ==========================================================================
+  // Query Execution Tests
+  // Note: These tests require the server to return proper Flight SQL schema
+  // in FlightInfo responses. Some servers may not support this.
+  // ==========================================================================
+
+  describe("Query Execution", () => {
+    test.skip("should execute simple SELECT (requires schema in FlightInfo)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const result = await client.query("SELECT 1 as value")
+      const table = await result.collect()
+
+      expect(table.numRows).toBe(1)
+      expect(table.numCols).toBeGreaterThan(0)
+    })
+
+    test.skip("should execute SELECT with multiple rows (requires schema in FlightInfo)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const result = await client.query("SELECT * FROM (VALUES (1), (2), (3)) AS t(n)")
+      const table = await result.collect()
+
+      expect(table.numRows).toBe(3)
+    })
+
+    test.skip("should stream record batches (requires schema in FlightInfo)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const result = await client.query("SELECT * FROM (VALUES (1), (2), (3)) AS t(n)")
+
+      let batchCount = 0
+      let totalRows = 0
+      for await (const batch of result.stream()) {
+        batchCount++
+        totalRows += batch.numRows
+      }
+
+      expect(batchCount).toBeGreaterThan(0)
+      expect(totalRows).toBe(3)
+    })
+
+    test.skip("should handle empty results (requires schema in FlightInfo)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const result = await client.query("SELECT 1 WHERE 1 = 0")
+      const table = await result.collect()
+
+      expect(table.numRows).toBe(0)
+    })
+
+    test.skip("should get result schema (requires schema in FlightInfo)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const result = await client.query("SELECT 1 as int_col, 'hello' as str_col")
+      const schema = result.schema
+
+      expect(schema).toBeDefined()
+      if (schema) {
+        expect(schema.fields.length).toBe(2)
+      }
+    })
+  })
+
+  // ==========================================================================
+  // Catalog Introspection Tests
+  // Note: These tests require Flight SQL catalog commands which may not be
+  // implemented by all servers. Skip if server doesn't support.
+  // ==========================================================================
+
+  describe("Catalog Introspection", () => {
+    test.skip("should get catalogs (requires Flight SQL catalog support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const catalogs = await client.getCatalogs()
+
+      expect(Array.isArray(catalogs)).toBe(true)
+      // At minimum, there should be a default catalog
+    })
+
+    test.skip("should get schemas (requires Flight SQL catalog support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const schemas = await client.getSchemas()
+
+      expect(Array.isArray(schemas)).toBe(true)
+    })
+
+    test.skip("should get tables (requires Flight SQL catalog support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const tables = await client.getTables()
+
+      expect(Array.isArray(tables)).toBe(true)
+    })
+
+    test.skip("should filter tables by type (requires Flight SQL catalog support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const tables = await client.getTables({ tableTypes: ["TABLE"] })
+
+      expect(Array.isArray(tables)).toBe(true)
+      // All returned tables should be of type TABLE
+      for (const table of tables) {
+        expect(table.tableType).toBe("TABLE")
+      }
+    })
+
+    test.skip("should get table types (requires Flight SQL catalog support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const types = await client.getTableTypes()
+
+      expect(Array.isArray(types)).toBe(true)
+      // Common types include TABLE, VIEW
+    })
+  })
+
+  // ==========================================================================
+  // Prepared Statement Tests
+  // Note: Prepared statements require DoAction support which may not be
+  // implemented by all servers.
+  // ==========================================================================
+
+  describe("Prepared Statements", () => {
+    test.skip("should prepare and execute statement (requires DoAction support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const stmt = await client.prepare("SELECT 1 as value")
+
+      try {
+        const result = await stmt.executeQuery()
+        const table = await result.collect()
+
+        expect(table.numRows).toBe(1)
+      } finally {
+        await stmt.close()
+      }
+    })
+
+    test.skip("should get prepared statement schema (requires DoAction support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const stmt = await client.prepare("SELECT 1 as int_col, 'text' as str_col")
+
+      try {
+        const schema = stmt.resultSchema
+
+        expect(schema).toBeDefined()
+        if (schema) {
+          expect(schema.fields.length).toBe(2)
+        }
+      } finally {
+        await stmt.close()
+      }
+    })
+
+    test.skip("should execute prepared statement multiple times (requires DoAction support)", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      const stmt = await client.prepare("SELECT 1 as value")
+
+      try {
+        // Execute multiple times
+        for (let i = 0; i < 3; i++) {
+          const result = await stmt.executeQuery()
+          const table = await result.collect()
+          expect(table.numRows).toBe(1)
+        }
+      } finally {
+        await stmt.close()
+      }
+    })
+  })
+
+  // ==========================================================================
+  // Error Handling Tests
+  // ==========================================================================
+
+  describe("Error Handling", () => {
+    test("should throw on invalid SQL", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      let threw = false
+      try {
+        await client.query("INVALID SQL SYNTAX HERE")
+      } catch {
+        threw = true
+      }
+      expect(threw).toBe(true)
+    })
+
+    test("should throw on non-existent table", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      let threw = false
+      try {
+        await client.query("SELECT * FROM non_existent_table_12345")
+      } catch {
+        threw = true
+      }
+      expect(threw).toBe(true)
+    })
+  })
+})
+
+// =============================================================================
+// Standalone Connection Tests (no shared client)
+// =============================================================================
+
+describe("Connection Edge Cases", () => {
+  test("should handle connection timeout", async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    const client = createTestClient({
+      host: "10.255.255.1", // Non-routable IP
+      connectTimeoutMs: 1000
+    })
+
+    let threw = false
+    try {
+      await client.connect()
+    } catch {
+      threw = true
+    }
+    expect(threw).toBe(true)
+    client.close()
+  })
+})

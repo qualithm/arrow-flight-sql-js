@@ -1,20 +1,72 @@
 {
-  "name": "arrow-flight-sql-js",
-  "private": true,
+  "name": "@qualithm/arrow-flight-sql",
+  "private": false,
   "version": "1.0.0",
   "type": "module",
+  "description": "Arrow Flight SQL client for JavaScript and TypeScript runtimes.",
+  "keywords": [
+    "arrow",
+    "apache-arrow",
+    "flight",
+    "flight-sql",
+    "grpc",
+    "database",
+    "sql",
+    "streaming",
+    "data"
+  ],
+  "license": "MIT",
+  "author": "Qualithm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qualithm/arrow-flight-sql-js.git"
+  },
+  "homepage": "https://github.com/qualithm/arrow-flight-sql-js#readme",
+  "bugs": {
+    "url": "https://github.com/qualithm/arrow-flight-sql-js/issues"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "proto",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "docs:api": "typedoc",
+    "docs:build": "bun run docs:api && cd docs && bun run build",
+    "docs:dev": "cd docs && bun run dev",
+    "docs:preview": "cd docs && bun run preview",
     "eslint:fix": "eslint --fix .",
+    "prepublishOnly": "bun run clean && bun run build",
     "prettier:format": "prettier --write .",
+    "proto:generate": "bun run scripts/generate-proto.ts",
     "start": "bun run src/index.ts",
-    "test": "bun test",
-    "test:unit": "bun test src/__tests__/unit",
-    "test:integration": "bun test src/__tests__/integration",
-    "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
+    "test:integration": "bun test src/__tests__/integration",
+    "test:unit": "bun test src/__tests__/unit",
+    "test:watch": "bun test --watch",
+    "test": "bun test",
     "watch": "bun --watch run src/index.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@grpc/grpc-js": "1.14.3",
+    "@grpc/proto-loader": "0.8.0",
+    "apache-arrow": "21.1.0"
+  },
   "overrides": {},
   "devDependencies": {
     "@eslint/js": "9.39.2",
@@ -25,6 +77,8 @@
     "globals": "17.1.0",
     "jiti": "2.6.1",
     "prettier": "3.8.1",
+    "typedoc": "0.27.9",
+    "typedoc-plugin-markdown": "4.2.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.53.1"
   }
