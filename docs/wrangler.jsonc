@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "docs",
+  "compatibility_date": "2025-05-08",
+  "main": "./src/server.tsx",
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true
+    }
+  },
+  "routes": [
+    {
+      "pattern": "docs.qualithm.com",
+      "custom_domain": true
+    }
+  ]
+}

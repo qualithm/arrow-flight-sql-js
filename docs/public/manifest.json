@@ -1,0 +1,32 @@
+{
+  "name": "Qualithm",
+  "short_name": "Qualithm",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f4f5",
+  "theme_color": "#18181b",
+  "description": "Qualithm simplifies Internet of Things &mdash; bringing devices, data, and automation together from prototype to production.",
+  "icons": [
+    {
+      "src": "https://cdn.qualithm.com/asset/icon-default-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.qualithm.com/asset/icon-default-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.qualithm.com/asset/icon-default-1024x1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
