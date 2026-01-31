@@ -406,6 +406,9 @@ bun test:integration
 # Lint and format
 bun run eslint:fix
 bun run prettier:format
+
+# Generate API documentation (outputs to ../arrow-flight-sql-docs/content/api)
+bun run docs:api
 ```
 
 ## Flight SQL Protocol Reference
