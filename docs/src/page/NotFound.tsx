@@ -8,16 +8,16 @@ function NotFound() {
   return (
     <main>
       <Seo
-        description="Qualithm Docs are your guide to connecting devices, managing data, and automating projects with ease."
+        description="Arrow Flight SQL JS Docs"
         image="https://cdn.qualithm.com/asset/og-image-qualithm.png"
         imageAlt="Qualithm"
         imageHeight="630"
         imageWidth="1200"
         locale="en_NZ"
         siteName="Qualithm"
-        title="Qualithm Docs &mdash; Not Found"
+        title="Arrow Flight SQL JS Docs &mdash; Not Found"
         type="website"
-        url={import.meta.env.VITE_URI_DOCS}
+        url={import.meta.env.BASE_URL}
       />
       <div className="safe-x-4 md:safe-x-6 w-full max-w-md flex-1 items-center py-6">
         <p>The page you&rsquo;re looking for doesn&rsquo;t exist.</p>
