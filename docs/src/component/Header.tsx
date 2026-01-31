@@ -2,7 +2,6 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 
 import useOutsideClick from "../hook/useOutsideClick"
-// import Logo from "./Logo"
 
 function Header() {
   const [menu, setMenu] = useState<string | null>(null)
@@ -36,10 +35,7 @@ function Header() {
           to={import.meta.env.VITE_URI_BASE}
           onClick={closeMenu}
         >
-          <span className="inline-flex items-center font-bold gap-2 ">
-            {/* <Logo className="size-8" /> */}
-            Arrow Flight SQL JS
-          </span>
+          <span className="inline-flex items-center font-bold gap-2 ">Arrow Flight SQL JS</span>
         </Link>
       </div>
       <div className="flex-row items-center gap-6">

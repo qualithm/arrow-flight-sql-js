@@ -1,17 +1,11 @@
 import { Link } from "react-router-dom"
 
-export type Instatus = {
-  page: {
-    status: "UP" | "HASISSUES" | "UNDERMAINTENANCE"
-  }
-}
-
 const socials = [
   {
     className: "dark:invert",
     imageUrl: "https://cdn.qualithm.com/brand/github.svg",
     name: "GitHub",
-    url: "https://github.com/qualithm"
+    url: "https://github.com/qualithm/arrow-flight-sql-js"
   }
 ]
 
