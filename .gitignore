@@ -1,9 +1,6 @@
 .DS_Store
 .env*
-.wrangler/
 data/
 dist/
-md/
 node_modules/
 proto/
-worker-configuration.d.ts
