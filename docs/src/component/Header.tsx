@@ -29,16 +29,26 @@ function Header() {
       className="safe-x-2 md:safe-x-4 sticky top-[env(safe-area-inset-top)] z-50 flex-row py-2 landscape:top-0"
       onClick={closeMenu}
     >
-      <div className="flex-1">
+      <div className="flex-1 flex-row items-center justify-between gap-6">
+        <button
+          className="pill-md pill-glass data-[active=true]:bg-glass-extreme text-2xl text-[var(--fg-bright)]"
+          data-active={menu === "side" ? "true" : "false"}
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleMenu("side")
+          }}
+        >
+          <span className="inline-flex items-center">
+            <span className="material-symbol">side_navigation</span>&zwnj;
+          </span>
+        </button>
         <Link
-          className="pill-md pill-glass self-start text-[var(--fg-bright)]"
+          className="pill-md pill-glass text-[var(--fg-bright)]"
           to={import.meta.env.VITE_URI_BASE}
           onClick={closeMenu}
         >
-          <span className="inline-flex items-center font-bold gap-2 ">Arrow Flight SQL JS</span>
+          <span className="inline-flex items-center gap-2 font-bold">Arrow Flight SQL JS</span>
         </Link>
-      </div>
-      <div className="flex-row items-center gap-6">
         <button
           className="pill-md pill-glass data-[active=true]:bg-glass-extreme text-2xl text-[var(--fg-bright)]"
           data-active={menu === "main" ? "true" : "false"}
