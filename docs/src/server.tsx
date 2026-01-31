@@ -45,7 +45,6 @@ app.use((c, next) => {
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       connectSrc: [
         "'self'",
-        import.meta.env.VITE_URI_PLATFORM,
         "https://sentry.io",
         "https://*.ingest.sentry.io",
         "https://*.ingest.us.sentry.io",
