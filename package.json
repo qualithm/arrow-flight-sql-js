@@ -43,19 +43,22 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
     "clean": "rm -rf dist",
-    "docs:api": "typedoc",
-    "eslint:fix": "eslint --fix .",
+    "dev": "bun --watch run src/index.ts",
+    "docs": "typedoc",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "prepublishOnly": "bun run clean && bun run build",
-    "prettier:format": "prettier --write .",
     "proto:generate": "bun run scripts/generate-proto.ts",
     "start": "bun run src/index.ts",
+    "test": "bun test",
     "test:coverage": "bun test --coverage",
     "test:integration": "bun test src/__tests__/integration",
     "test:unit": "bun test src/__tests__/unit",
-    "test:watch": "bun test --watch",
-    "test": "bun test",
-    "watch": "bun --watch run src/index.ts"
+    "test:watch": "bun test --watch"
   },
   "dependencies": {
     "@grpc/grpc-js": "1.14.3",

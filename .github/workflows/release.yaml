@@ -31,35 +31,17 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: arrow-flight-sql-docs
-
-      - name: Checkout docs repo
-        uses: actions/checkout@v5
-        with:
-          repository: ${{ github.repository_owner }}/arrow-flight-sql-docs
-          token: ${{ steps.app-token.outputs.token }}
-          path: arrow-flight-sql-docs
-
       - name: Generate API docs
         run: |
           set -euo pipefail
-          rm -rf arrow-flight-sql-docs/content/js
-          bun run docs:api
+          rm -rf docs
+          bun run docs
 
       - name: Commit and push changes
-        shell: bash
-        working-directory: arrow-flight-sql-docs
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add content/js
-          git diff --cached --quiet || git commit -m "chore(docs): sync API docs from arrow-flight-sql-js@${{ github.sha }}"
+          git add docs
+          git diff --cached --quiet || git commit -m "chore(docs): update API docs"
           git push

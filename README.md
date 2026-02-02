@@ -404,11 +404,11 @@ bun test:unit
 bun test:integration
 
 # Lint and format
-bun run eslint:fix
-bun run prettier:format
+bun run lint:fix
+bun run format:fix
 
-# Generate API documentation (outputs to ../arrow-flight-sql-docs/content/api)
-bun run docs:api
+# Generate API documentation
+bun run docs
 ```
 
 ## Flight SQL Protocol Reference
