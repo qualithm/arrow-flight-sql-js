@@ -10,7 +10,6 @@
   "excludeInternal": true,
   "excludeExternals": true,
   "plugin": ["typedoc-plugin-markdown"],
-  "router": "module",
   "hidePageHeader": true,
   "hideBreadcrumbs": true,
   "searchInComments": true,
