@@ -1,7 +1,7 @@
 /**
  * @qualithm/arrow-flight-sql-js
  *
- * A standards-compliant Arrow Flight SQL client for JavaScript/TypeScript.
+ * Arrow Flight SQL client for JavaScript and TypeScript runtimes.
  *
  * @example
  * ```typescript
