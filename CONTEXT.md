@@ -192,10 +192,30 @@ The project has a complete, production-ready Arrow Flight SQL client:
 **Interoperability Notes:**
 
 - Connection and authentication: ✅ Working
-- Query execution with FlightInfo: ✅ Working
-- Catalog introspection (GetCatalogs, GetSchemas, etc.): ⚠️ Requires server support
-- Prepared statements (DoAction): ⚠️ Requires server support
-- Schema parsing from FlightInfo: ⚠️ Needs investigation with lakehouse team
+- Query execution with FlightInfo: ⚠️ Schema not parsed (server returns schema, client parsing
+  issue)
+- Catalog introspection (GetCatalogs, GetSchemas, etc.): ❌ Blocked by lakehouse server (see below)
+- Prepared statements (DoAction): ❌ Blocked by lakehouse server (see below)
+- Schema parsing from FlightInfo: ⚠️ Returns null, needs client-side fix in `tryParseSchema()`
+
+**Lakehouse Server Blocking Issues (2026-02-04):**
+
+The lakehouse server uses `FlightServiceServer` instead of `FlightSqlServiceServer`, causing:
+
+1. **Catalog commands fail** — `CommandGetCatalogs`, `CommandGetSchemas`, etc. are treated as raw
+   SQL
+   - Error: `ParserError("Expected: an SQL statement, found: type")`
+   - Fix: Server must use `FlightSqlServiceServer::new(LakehouseFlightSqlService)`
+
+2. **Prepared statements fail** — `ActionCreatePreparedStatementRequest` not dispatched
+   - Error: `Unknown action type: CreatePreparedStatement`
+   - Fix: Same as above — `FlightSqlServiceServer` handles action dispatch
+
+3. **Schema in FlightInfo** — Server encodes schema correctly, but client `tryParseSchema()` fails
+   - Client issue: `RecordBatchReader.from()` expects full IPC stream, not schema-only message
+   - Fix: Use `MessageReader` to parse schema message directly
+
+See `lakehouse/CONTEXT.md` Phase 0 for server-side fix requirements.
 
 ### M7: Push Subscriptions (DoExchange Support)
 
@@ -377,17 +397,18 @@ documents runtime-specific installation/usage notes.
 
 > Append-only. Never edit or delete existing entries.
 
-| Date       | Learning                                                                                                                                                        |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-01-26 | Project initialized. Modeling on Java/C++/Go reference implementations for API consistency.                                                                     |
-| 2026-01-26 | Used manual protobuf encoding in proto.ts to avoid full protobuf runtime dependency. Wire format is simple for Flight SQL commands (varint + length-delimited). |
-| 2026-01-26 | ESLint with `erasableSyntaxOnly` requires const objects instead of enums (e.g., DescriptorType uses `as const` pattern).                                        |
-| 2026-01-26 | gRPC streams in @grpc/grpc-js are async iterable, avoiding need for manual stream-to-iterator conversion.                                                       |
-| 2026-01-26 | Arrow IPC messages use custom framing (continuation byte + metadata length) that differs from standard Arrow file format.                                       |
-| 2026-01-27 | Connection pool uses object wrapper pattern for error state tracking (allows TypeScript to understand mutation from event handlers).                            |
-| 2026-01-27 | RetryPolicy class provides reusable retry configuration with pre-built policies (none, fast, default, aggressive, reconnection).                                |
-| 2026-01-27 | Catalog introspection methods use a generic fetchCatalogResults helper that parses Arrow IPC data and maps rows to typed objects using field mappers.           |
-| 2026-01-27 | MetricsHandler interface enables pluggable observability (NoopMetricsHandler, ConsoleMetricsHandler, InMemoryMetricsHandler) with standard metric names.        |
-| 2026-01-27 | Unit tests using Bun test runner with describe/test/expect pattern. Tests for errors, retry, proto, and metrics achieve 128 total unit test coverage.           |
-| 2026-01-27 | Integration tests against lakehouse revealed Flight SQL feature gaps: catalog introspection commands treated as raw SQL, prepared statements not implemented.   |
-| 2026-01-27 | npm publish config requires: main, module, types, exports, files fields in package.json. tsconfig.build.json uses bundler resolution for ESM compatibility.     |
+| Date       | Learning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-01-26 | Project initialized. Modeling on Java/C++/Go reference implementations for API consistency.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-01-26 | Used manual protobuf encoding in proto.ts to avoid full protobuf runtime dependency. Wire format is simple for Flight SQL commands (varint + length-delimited).                                                                                                                                                                                                                                                                                                                                     |
+| 2026-01-26 | ESLint with `erasableSyntaxOnly` requires const objects instead of enums (e.g., DescriptorType uses `as const` pattern).                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-01-26 | gRPC streams in @grpc/grpc-js are async iterable, avoiding need for manual stream-to-iterator conversion.                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-01-26 | Arrow IPC messages use custom framing (continuation byte + metadata length) that differs from standard Arrow file format.                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-01-27 | Connection pool uses object wrapper pattern for error state tracking (allows TypeScript to understand mutation from event handlers).                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-01-27 | RetryPolicy class provides reusable retry configuration with pre-built policies (none, fast, default, aggressive, reconnection).                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-01-27 | Catalog introspection methods use a generic fetchCatalogResults helper that parses Arrow IPC data and maps rows to typed objects using field mappers.                                                                                                                                                                                                                                                                                                                                               |
+| 2026-01-27 | MetricsHandler interface enables pluggable observability (NoopMetricsHandler, ConsoleMetricsHandler, InMemoryMetricsHandler) with standard metric names.                                                                                                                                                                                                                                                                                                                                            |
+| 2026-01-27 | Unit tests using Bun test runner with describe/test/expect pattern. Tests for errors, retry, proto, and metrics achieve 128 total unit test coverage.                                                                                                                                                                                                                                                                                                                                               |
+| 2026-01-27 | Integration tests against lakehouse revealed Flight SQL feature gaps: catalog introspection commands treated as raw SQL, prepared statements not implemented.                                                                                                                                                                                                                                                                                                                                       |
+| 2026-01-27 | npm publish config requires: main, module, types, exports, files fields in package.json. tsconfig.build.json uses bundler resolution for ESM compatibility.                                                                                                                                                                                                                                                                                                                                         |
+| 2026-02-04 | Integration test re-run confirmed lakehouse server issues. Schema parsing fails because `tryParseSchema()` uses `RecordBatchReader.from()` which expects a full IPC stream, but FlightInfo.schema is a single IPC message containing only schema. Need to use `MessageReader` to parse schema-only messages. Server-side issues: `FlightServiceServer` used instead of `FlightSqlServiceServer`, so catalog commands and prepared statements aren't dispatched to `FlightSqlService` trait methods. |

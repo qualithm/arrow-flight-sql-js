@@ -106,7 +106,7 @@ describe("Lakehouse Integration", () => {
   // ==========================================================================
 
   describe("Query Execution", () => {
-    test.skip("should execute simple SELECT (requires schema in FlightInfo)", async () => {
+    test("should execute simple SELECT", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -118,7 +118,7 @@ describe("Lakehouse Integration", () => {
       expect(table.numCols).toBeGreaterThan(0)
     })
 
-    test.skip("should execute SELECT with multiple rows (requires schema in FlightInfo)", async () => {
+    test("should execute SELECT with multiple rows", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -129,7 +129,7 @@ describe("Lakehouse Integration", () => {
       expect(table.numRows).toBe(3)
     })
 
-    test.skip("should stream record batches (requires schema in FlightInfo)", async () => {
+    test("should stream record batches", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -147,7 +147,7 @@ describe("Lakehouse Integration", () => {
       expect(totalRows).toBe(3)
     })
 
-    test.skip("should handle empty results (requires schema in FlightInfo)", async () => {
+    test("should handle empty results", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -158,7 +158,7 @@ describe("Lakehouse Integration", () => {
       expect(table.numRows).toBe(0)
     })
 
-    test.skip("should get result schema (requires schema in FlightInfo)", async () => {
+    test("should get result schema", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -180,7 +180,7 @@ describe("Lakehouse Integration", () => {
   // ==========================================================================
 
   describe("Catalog Introspection", () => {
-    test.skip("should get catalogs (requires Flight SQL catalog support)", async () => {
+    test("should get catalogs", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -191,7 +191,7 @@ describe("Lakehouse Integration", () => {
       // At minimum, there should be a default catalog
     })
 
-    test.skip("should get schemas (requires Flight SQL catalog support)", async () => {
+    test("should get schemas", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -201,7 +201,7 @@ describe("Lakehouse Integration", () => {
       expect(Array.isArray(schemas)).toBe(true)
     })
 
-    test.skip("should get tables (requires Flight SQL catalog support)", async () => {
+    test("should get tables", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -211,7 +211,7 @@ describe("Lakehouse Integration", () => {
       expect(Array.isArray(tables)).toBe(true)
     })
 
-    test.skip("should filter tables by type (requires Flight SQL catalog support)", async () => {
+    test("should filter tables by type", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -225,7 +225,7 @@ describe("Lakehouse Integration", () => {
       }
     })
 
-    test.skip("should get table types (requires Flight SQL catalog support)", async () => {
+    test("should get table types", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -244,7 +244,7 @@ describe("Lakehouse Integration", () => {
   // ==========================================================================
 
   describe("Prepared Statements", () => {
-    test.skip("should prepare and execute statement (requires DoAction support)", async () => {
+    test("should prepare and execute statement", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -261,7 +261,7 @@ describe("Lakehouse Integration", () => {
       }
     })
 
-    test.skip("should get prepared statement schema (requires DoAction support)", async () => {
+    test("should get prepared statement schema", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -280,7 +280,7 @@ describe("Lakehouse Integration", () => {
       }
     })
 
-    test.skip("should execute prepared statement multiple times (requires DoAction support)", async () => {
+    test("should execute prepared statement multiple times", async () => {
       if (skipIfNoIntegration()) {
         return
       }
