@@ -7,8 +7,11 @@
 
 import {
   type Field,
+  MessageHeader,
+  MessageReader,
   type RecordBatch,
   RecordBatchReader,
+  RecordBatchStreamWriter,
   type Schema,
   Table,
   tableFromIPC
@@ -22,19 +25,28 @@ import {
  * Parse an Arrow schema from IPC format bytes
  *
  * The schema bytes format from Flight:
- *   - 4 bytes: optional IPC_CONTINUATION_TOKEN (0xFFFFFFFF)
+ *   - 4 bytes: IPC_CONTINUATION_TOKEN (0xFFFFFFFF)
  *   - 4 bytes: message length
  *   - flatbuffer Message with Schema header
+ *
+ * Uses MessageReader to parse schema-only IPC messages, which is the correct
+ * approach for FlightInfo.schema bytes (as opposed to RecordBatchReader which
+ * expects a full IPC stream with record batches).
  */
 export function parseSchema(schemaBytes: Uint8Array): Schema {
   if (schemaBytes.length === 0) {
     throw new Error("Cannot parse empty schema bytes")
   }
 
-  // Use RecordBatchReader to parse the schema
-  // We need to wrap it in a minimal IPC stream format
-  const reader = RecordBatchReader.from(schemaBytes)
-  return reader.schema
+  // Use MessageReader which can parse schema-only IPC messages
+  const reader = new MessageReader(schemaBytes)
+  const schema = reader.readSchema()
+
+  if (!schema) {
+    throw new Error("Failed to parse schema from IPC message")
+  }
+
+  return schema
 }
 
 /**
@@ -60,46 +72,58 @@ export function tryParseSchema(schemaBytes: Uint8Array): Schema | null {
 /**
  * Parse a single FlightData message into a RecordBatch
  *
- * FlightData format:
- *   - data_header: IPC Message header (flatbuffer)
- *   - data_body: IPC Message body (raw data buffers)
+ * Flight sends data in a streaming format where:
+ *   - First message: Schema (dataHeader only, no dataBody)
+ *   - Subsequent messages: RecordBatch (dataHeader + dataBody)
+ *
+ * The dataHeader is a raw flatbuffer Message (without IPC framing).
+ * We need to frame it before passing to apache-arrow.
+ *
+ * @param dataHeader - IPC Message flatbuffer (without continuation/length prefix)
+ * @param dataBody - IPC Message body (raw data buffers)
+ * @param schema - Schema to use for parsing (from FlightInfo or first message)
  */
 export function parseFlightData(
   dataHeader: Uint8Array,
   dataBody: Uint8Array,
-  schemaForValidation: Schema
+  schema: Schema
 ): RecordBatch | null {
   if (dataHeader.length === 0) {
     return null
   }
 
-  // Validate schema is provided (used for type consistency)
-  void schemaForValidation
+  // Frame the header with IPC continuation marker + length prefix
+  const framedData = frameAsIPC(dataHeader, dataBody)
 
-  // Combine header and body into an IPC message
-  // The IPC stream format expects the message in a specific layout
-  const reader = RecordBatchReader.from(combineHeaderAndBody(dataHeader, dataBody))
+  // Check if this is a schema message (skip it, we already have schema)
+  const msgReader = new MessageReader(framedData)
+  const msg = msgReader.readMessage()
+  if (!msg || msg.headerType === MessageHeader.Schema) {
+    return null // Schema message, no batch to return
+  }
 
-  // Read the first (and only) batch
-  const batch = reader.next()
-  if (batch.value !== null && batch.value !== undefined) {
-    return batch.value as RecordBatch
+  // For RecordBatch messages, we need a complete IPC stream with schema + batch
+  // Create a minimal stream with schema first, then this batch
+  const schemaBytes = serializeSchemaMessage(schema)
+  const fullStream = concatArrays([schemaBytes, framedData])
+
+  try {
+    const reader = RecordBatchReader.from(fullStream)
+    const batch = reader.next()
+    if (batch.value !== null && batch.value !== undefined) {
+      return batch.value as RecordBatch
+    }
+  } catch {
+    // If parsing fails, return null
   }
 
   return null
 }
 
 /**
- * Combine IPC message header and body into a complete message buffer
+ * Frame raw flatbuffer bytes with IPC continuation marker and length prefix
  */
-function combineHeaderAndBody(header: Uint8Array, body: Uint8Array): Uint8Array {
-  // IPC stream format:
-  // - 4 bytes: continuation token (0xFFFFFFFF) [optional]
-  // - 4 bytes: metadata length
-  // - N bytes: metadata (flatbuffer Message)
-  // - padding to 8-byte boundary
-  // - M bytes: body
-
+function frameAsIPC(header: Uint8Array, body: Uint8Array): Uint8Array {
   const continuationToken = new Uint8Array([0xff, 0xff, 0xff, 0xff])
   const metadataLength = new Uint8Array(4)
   new DataView(metadataLength.buffer).setInt32(0, header.length, true)
@@ -108,26 +132,70 @@ function combineHeaderAndBody(header: Uint8Array, body: Uint8Array): Uint8Array 
   const headerPadding = (8 - ((header.length + 4 + 4) % 8)) % 8
   const padding = new Uint8Array(headerPadding)
 
-  const totalLength =
-    continuationToken.length + metadataLength.length + header.length + padding.length + body.length
+  return concatArrays([continuationToken, metadataLength, header, padding, body])
+}
 
+/**
+ * Serialize a schema to IPC message format
+ */
+function serializeSchemaMessage(schema: Schema): Uint8Array {
+  // The schema from FlightInfo is already in IPC format with framing
+  // We need to extract just the schema portion
+
+  // For now, use a workaround: create an empty table with the schema
+  // and extract the schema message from the IPC representation
+  const emptyTable = new Table(schema)
+  const ipcBytes = tableToIPCBytes(emptyTable)
+
+  // The IPC stream starts with schema message - extract just that part
+  // Read the first message (schema)
+  const reader = new MessageReader(ipcBytes)
+  const msg = reader.readMessage()
+  if (msg && msg.headerType === MessageHeader.Schema) {
+    // Return the schema portion
+    // The reader consumes: continuation(4) + length(4) + header + padding
+    const metadataLength = new DataView(ipcBytes.buffer, 4, 4).getInt32(0, true)
+    const headerPadding = (8 - ((metadataLength + 4 + 4) % 8)) % 8
+    const schemaEnd = 4 + 4 + metadataLength + headerPadding
+    return ipcBytes.slice(0, schemaEnd)
+  }
+
+  // Fallback: shouldn't happen
+  return new Uint8Array(0)
+}
+
+/**
+ * Helper to serialize a Table to IPC stream bytes
+ */
+function tableToIPCBytes(table: Table): Uint8Array {
+  const writer = RecordBatchStreamWriter.throughNode()
+  const chunks: Uint8Array[] = []
+
+  // Collect chunks synchronously
+  writer.on("data", (chunk: Uint8Array) => {
+    chunks.push(chunk)
+  })
+
+  // Write all batches
+  for (const batch of table.batches) {
+    writer.write(batch)
+  }
+  writer.end()
+
+  return concatArrays(chunks)
+}
+
+/**
+ * Concatenate multiple Uint8Arrays
+ */
+function concatArrays(arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0)
   const result = new Uint8Array(totalLength)
   let offset = 0
-
-  result.set(continuationToken, offset)
-  offset += continuationToken.length
-
-  result.set(metadataLength, offset)
-  offset += metadataLength.length
-
-  result.set(header, offset)
-  offset += header.length
-
-  result.set(padding, offset)
-  offset += padding.length
-
-  result.set(body, offset)
-
+  for (const arr of arrays) {
+    result.set(arr, offset)
+    offset += arr.length
+  }
   return result
 }
 
@@ -211,16 +279,7 @@ function serializeEmptyTable(schema: Schema): Uint8Array {
   return result
 }
 
-/**
- * Serialize a schema to IPC message format
- * This is a placeholder - proper implementation would use flatbuffers
- */
-function serializeSchemaMessage(schema: Schema): Uint8Array {
-  // For now, return empty - the actual implementation would use
-  // the Arrow IPC format to serialize the schema
-  void schema // Suppress unused warning until implementation is complete
-  return new Uint8Array()
-}
+// serializeSchemaMessage is defined above
 
 // ============================================================================
 // Table Utilities

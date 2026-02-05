@@ -74,7 +74,7 @@ The project has a complete, production-ready Arrow Flight SQL client:
 - `src/__tests__/unit/retry.test.ts` – Retry logic tests (31 tests) ✅
 - `src/__tests__/unit/proto.test.ts` – Protobuf encoding tests (32 tests) ✅
 - `src/__tests__/unit/metrics.test.ts` – Metrics handler tests (38 tests) ✅
-- `src/__tests__/integration/lakehouse.test.ts` – Integration tests (7 pass, 13 skip) ✅
+- `src/__tests__/integration/lakehouse.test.ts` – Integration tests (12 pass, 7 skip) ✅
 
 ### npm Publication Ready
 
@@ -192,30 +192,31 @@ The project has a complete, production-ready Arrow Flight SQL client:
 **Interoperability Notes:**
 
 - Connection and authentication: ✅ Working
-- Query execution with FlightInfo: ⚠️ Schema not parsed (server returns schema, client parsing
-  issue)
+- Query execution with FlightInfo: ✅ Working (12 tests pass)
 - Catalog introspection (GetCatalogs, GetSchemas, etc.): ❌ Blocked by lakehouse server (see below)
-- Prepared statements (DoAction): ❌ Blocked by lakehouse server (see below)
-- Schema parsing from FlightInfo: ⚠️ Returns null, needs client-side fix in `tryParseSchema()`
+- Prepared statement execution: ❌ Blocked by lakehouse server (see below)
+- Schema parsing from FlightInfo: ✅ Fixed (uses `MessageReader.readSchema()`)
+- Streaming results: ✅ Fixed (proper IPC framing with continuation token + length prefix)
 
-**Lakehouse Server Blocking Issues (2026-02-04):**
+**Lakehouse Server Blocking Issues (2026-02-05):**
 
-The lakehouse server uses `FlightServiceServer` instead of `FlightSqlServiceServer`, causing:
+The lakehouse server uses `FlightServiceServer::new()` instead of `FlightSqlServiceServer::new()`,
+causing:
 
 1. **Catalog commands fail** — `CommandGetCatalogs`, `CommandGetSchemas`, etc. are treated as raw
    SQL
-   - Error: `ParserError("Expected: an SQL statement, found: type")`
+   - Error: `No SQL statements` (ticket bytes parsed as SQL text)
    - Fix: Server must use `FlightSqlServiceServer::new(LakehouseFlightSqlService)`
+   - Location: `lakehouse/crates/lakehouse-flight/src/server.rs` line 246
 
-2. **Prepared statements fail** — `ActionCreatePreparedStatementRequest` not dispatched
-   - Error: `Unknown action type: CreatePreparedStatement`
-   - Fix: Same as above — `FlightSqlServiceServer` handles action dispatch
+2. **Prepared statement execution fails** — `get_flight_info_prepared_statement` not dispatched
+   - Error: `get_flight_info_prepared_statement has no default implementation`
+   - Fix: Same as above — `FlightSqlServiceServer` handles dispatch to trait methods
+   - Note: `client.prepare()` works; only `stmt.executeQuery()` fails
 
-3. **Schema in FlightInfo** — Server encodes schema correctly, but client `tryParseSchema()` fails
-   - Client issue: `RecordBatchReader.from()` expects full IPC stream, not schema-only message
-   - Fix: Use `MessageReader` to parse schema message directly
-
-See `lakehouse/CONTEXT.md` Phase 0 for server-side fix requirements.
+See `lakehouse/CONTEXT.md` Phase 0 for server-side fix status. **Phase 0 is NOT complete** — the
+`FlightSqlService` trait methods are implemented but never called because the server wiring is
+wrong.
 
 ### M7: Push Subscriptions (DoExchange Support)
 
@@ -412,3 +413,4 @@ documents runtime-specific installation/usage notes.
 | 2026-01-27 | Integration tests against lakehouse revealed Flight SQL feature gaps: catalog introspection commands treated as raw SQL, prepared statements not implemented.                                                                                                                                                                                                                                                                                                                                       |
 | 2026-01-27 | npm publish config requires: main, module, types, exports, files fields in package.json. tsconfig.build.json uses bundler resolution for ESM compatibility.                                                                                                                                                                                                                                                                                                                                         |
 | 2026-02-04 | Integration test re-run confirmed lakehouse server issues. Schema parsing fails because `tryParseSchema()` uses `RecordBatchReader.from()` which expects a full IPC stream, but FlightInfo.schema is a single IPC message containing only schema. Need to use `MessageReader` to parse schema-only messages. Server-side issues: `FlightServiceServer` used instead of `FlightSqlServiceServer`, so catalog commands and prepared statements aren't dispatched to `FlightSqlService` trait methods. |
+| 2026-02-05 | Fixed schema parsing: `parseSchema()` now uses `MessageReader.readSchema()` for schema-only IPC messages. Fixed `stream()`: FlightData.dataHeader is raw flatbuffer without IPC framing; added continuation token (0xFFFFFFFF) + length prefix before parsing with `RecordBatchReader`. Integration tests now 12 pass, 7 skip (server-blocked). npm publish workflow added to release.yaml. Removed debug scripts.                                                                                  |

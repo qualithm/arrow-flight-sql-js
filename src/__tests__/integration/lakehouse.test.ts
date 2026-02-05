@@ -175,11 +175,11 @@ describe("Lakehouse Integration", () => {
 
   // ==========================================================================
   // Catalog Introspection Tests
-  // Note: These tests require Flight SQL catalog commands which may not be
-  // implemented by all servers. Skip if server doesn't support.
+  // BLOCKED: Server returns "No SQL statements" error when DoGet is called
+  // with catalog command tickets. Server-side fix needed.
   // ==========================================================================
 
-  describe("Catalog Introspection", () => {
+  describe.skip("Catalog Introspection", () => {
     test("should get catalogs", async () => {
       if (skipIfNoIntegration()) {
         return
@@ -239,12 +239,12 @@ describe("Lakehouse Integration", () => {
 
   // ==========================================================================
   // Prepared Statement Tests
-  // Note: Prepared statements require DoAction support which may not be
-  // implemented by all servers.
+  // BLOCKED: Server returns "get_flight_info_prepared_statement has no default
+  // implementation". Server-side fix needed.
   // ==========================================================================
 
   describe("Prepared Statements", () => {
-    test("should prepare and execute statement", async () => {
+    test.skip("should prepare and execute statement", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -280,7 +280,7 @@ describe("Lakehouse Integration", () => {
       }
     })
 
-    test("should execute prepared statement multiple times", async () => {
+    test.skip("should execute prepared statement multiple times", async () => {
       if (skipIfNoIntegration()) {
         return
       }

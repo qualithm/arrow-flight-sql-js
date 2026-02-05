@@ -17,6 +17,36 @@ permissions:
   id-token: write
 
 jobs:
+  publish_npm:
+    name: Publish to npm
+    runs-on: ubuntu-24.04
+    if:
+      ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion ==
+      'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   deploy_docs:
     name: Deploy Docs
     runs-on: ubuntu-24.04

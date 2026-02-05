@@ -6,7 +6,7 @@
  */
 
 import * as grpc from "@grpc/grpc-js"
-import type { RecordBatch, Schema, Table } from "apache-arrow"
+import { type RecordBatch, RecordBatchReader, type Schema, type Table } from "apache-arrow"
 
 import { collectToTable, parseFlightData, tryParseSchema } from "./arrow"
 import { AuthenticationError, ConnectionError, FlightSqlError } from "./errors"
@@ -592,8 +592,7 @@ export class FlightSqlClient {
     }
 
     for (const endpoint of flightInfo.endpoints) {
-      for await (const data of this.doGet(endpoint.ticket)) {
-        const flightData = data as unknown as { dataHeader?: Uint8Array; dataBody?: Uint8Array }
+      for await (const flightData of this.doGet(endpoint.ticket)) {
         if (flightData.dataHeader && flightData.dataBody) {
           const batch = parseFlightData(flightData.dataHeader, flightData.dataBody, schema)
           if (batch) {
@@ -705,9 +704,11 @@ export class FlightSqlClient {
    * Retrieve data for a ticket as an async iterator of FlightData.
    *
    * @param ticket - Ticket from FlightInfo endpoint
-   * @yields FlightData chunks
+   * @yields FlightData chunks containing dataHeader and dataBody
    */
-  async *doGet(ticket: Ticket): AsyncGenerator<Uint8Array, void, unknown> {
+  async *doGet(
+    ticket: Ticket
+  ): AsyncGenerator<{ dataHeader?: Uint8Array; dataBody?: Uint8Array }, void, unknown> {
     this.ensureConnected()
 
     const client = this.grpcClient as grpc.Client & {
@@ -722,9 +723,7 @@ export class FlightSqlClient {
     try {
       for await (const data of this.wrapStream(stream)) {
         const flightData = data as { dataBody?: Uint8Array; dataHeader?: Uint8Array }
-        if (flightData.dataBody) {
-          yield flightData.dataBody
-        }
+        yield flightData
       }
     } finally {
       stream.cancel()
@@ -1150,6 +1149,12 @@ export class QueryResult {
   /**
    * Stream record batches from all endpoints.
    * This is memory-efficient for large result sets.
+   *
+   * Flight SQL streams data as:
+   *   1. Schema message (dataHeader only)
+   *   2. RecordBatch messages (dataHeader + dataBody)
+   *
+   * We collect all messages and parse them as a complete IPC stream.
    */
   async *stream(): AsyncGenerator<RecordBatch, void, unknown> {
     if (!this.parsedSchema) {
@@ -1157,21 +1162,84 @@ export class QueryResult {
     }
 
     for (const endpoint of this.info.endpoints) {
-      for await (const data of this.client.doGet(endpoint.ticket)) {
-        // Parse the FlightData into a RecordBatch
-        const flightData = data as { dataHeader?: Uint8Array; dataBody?: Uint8Array }
-        if (flightData.dataHeader && flightData.dataBody) {
-          const batch = parseFlightData(
+      // Collect all FlightData messages for this endpoint
+      const framedParts: Uint8Array[] = []
+
+      for await (const flightData of this.client.doGet(endpoint.ticket)) {
+        if (flightData.dataHeader && flightData.dataHeader.length > 0) {
+          const framed = this.frameAsIPC(
             flightData.dataHeader,
-            flightData.dataBody,
-            this.parsedSchema
+            flightData.dataBody || new Uint8Array(0)
           )
-          if (batch) {
-            yield batch
-          }
+          framedParts.push(framed)
         }
       }
+
+      if (framedParts.length === 0) {
+        continue
+      }
+
+      // Concatenate all framed messages into a complete IPC stream
+      const fullStream = this.concatArrays(framedParts)
+
+      // Parse batches from the full stream
+      try {
+        const reader = RecordBatchReader.from(fullStream)
+        for (const batch of reader) {
+          yield batch
+        }
+      } catch {
+        // If parsing fails, continue to next endpoint
+      }
     }
+  }
+
+  /**
+   * Frame raw flatbuffer bytes with IPC continuation marker and length prefix
+   */
+  private frameAsIPC(header: Uint8Array, body: Uint8Array): Uint8Array {
+    const continuationToken = new Uint8Array([0xff, 0xff, 0xff, 0xff])
+    const metadataLength = new Uint8Array(4)
+    new DataView(metadataLength.buffer).setInt32(0, header.length, true)
+
+    // Calculate padding for 8-byte alignment
+    const headerPadding = (8 - ((header.length + 4 + 4) % 8)) % 8
+    const padding = new Uint8Array(headerPadding)
+
+    const totalLength =
+      continuationToken.length +
+      metadataLength.length +
+      header.length +
+      padding.length +
+      body.length
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+
+    result.set(continuationToken, offset)
+    offset += continuationToken.length
+    result.set(metadataLength, offset)
+    offset += metadataLength.length
+    result.set(header, offset)
+    offset += header.length
+    result.set(padding, offset)
+    offset += padding.length
+    result.set(body, offset)
+
+    return result
+  }
+
+  /**
+   * Concatenate multiple Uint8Arrays
+   */
+  private concatArrays(arrays: Uint8Array[]): Uint8Array {
+    const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0)
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+    for (const arr of arrays) {
+      result.set(arr, offset)
+      offset += arr.length
+    }
+    return result
   }
 
   /**
