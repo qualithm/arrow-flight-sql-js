@@ -42,7 +42,23 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Check if version exists on npm
+        id: version_check
+        run: |
+          PACKAGE_NAME=$(jq -r .name package.json)
+          PACKAGE_VERSION=$(jq -r .version package.json)
+          echo "package=$PACKAGE_NAME@$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+
+          if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Version $PACKAGE_VERSION already published, skipping"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Version $PACKAGE_VERSION not found, will publish"
+          fi
+
       - name: Publish to npm
+        if: steps.version_check.outputs.exists == 'false'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
