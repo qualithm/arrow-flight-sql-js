@@ -193,8 +193,10 @@ The project has a complete, production-ready Arrow Flight SQL client:
 
 - Connection and authentication: ✅ Working
 - Query execution with FlightInfo: ✅ Working (12 tests pass)
-- Catalog introspection (GetCatalogs, GetSchemas, etc.): ⚠️ Under investigation (see below)
-- Prepared statement execution: ⚠️ Under investigation (see below)
+- Catalog introspection (GetCatalogs, GetSchemas, etc.): ✅ Working (fixed 2026-02-09, server-side
+  ticket encoding)
+- Prepared statement execution: ⚠️ Server-side not implemented
+  (`get_flight_info_prepared_statement`)
 - Schema parsing from FlightInfo: ✅ Fixed (uses `MessageReader.readSchema()`)
 - Streaming results: ✅ Fixed (proper IPC framing with continuation token + length prefix)
 
@@ -209,13 +211,18 @@ The lakehouse server configuration was confirmed correct on 2026-02-09:
 - `FlightSqlServiceServer` does NOT exist in arrow-flight v57 — the earlier analysis was incorrect
 - All 55 lakehouse-flight Rust tests pass
 
-The 7 skipped integration tests require investigation on the client side:
+**Current test results: 17 pass, 2 skip, 0 fail**
 
-1. **Catalog commands** — May be client-side protobuf encoding issue
-2. **Prepared statement execution** — May be client-side handle encoding issue
+The 2 skipped tests are for prepared statement execution:
 
-Next steps: Add debug logging to capture wire format of failing requests and compare with Rust test
-expectations.
+1. **Prepared statement executeQuery** — Server returns "get_flight_info_prepared_statement has no
+   default implementation"
+2. **Prepared statement multiple execution** — Same server-side issue
+
+**Fixed issues:**
+
+- **Catalog commands (2026-02-09)** — Server was encoding tickets without `as_any()` wrapper,
+  causing DoGet to fall through to SQL execution. Fixed in `lakehouse-flight/src/sql.rs`.
 
 ### M7: Push Subscriptions (DoExchange Support)
 

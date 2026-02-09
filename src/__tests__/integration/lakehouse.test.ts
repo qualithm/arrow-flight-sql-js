@@ -179,7 +179,7 @@ describe("Lakehouse Integration", () => {
   // with catalog command tickets. Server-side fix needed.
   // ==========================================================================
 
-  describe.skip("Catalog Introspection", () => {
+  describe("Catalog Introspection", () => {
     test("should get catalogs", async () => {
       if (skipIfNoIntegration()) {
         return
