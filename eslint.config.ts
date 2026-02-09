@@ -56,6 +56,11 @@ const namingConventionBase = [
 
   { selector: "objectLiteralProperty", format: ["camelCase", "PascalCase"] },
   { selector: "objectLiteralProperty", modifiers: ["requiresQuotes"], format: null },
+  {
+    selector: "objectLiteralProperty",
+    format: null,
+    filter: { regex: "^[A-Z][A-Z0-9_]*$", match: true }
+  },
   { selector: "objectLiteralMethod", format: ["camelCase"] },
   { selector: "objectLiteralMethod", modifiers: ["requiresQuotes"], format: null },
 

@@ -1605,9 +1605,14 @@ export class Subscription implements AsyncIterable<RecordBatch> {
   private connectedState = false
   private batchesReceivedCount = 0
   private reconnectAttempts = 0
-  private aborted = false
+  private abortedFlag = false
   private lastHeartbeat: number = Date.now()
   private iterating = false
+
+  /** Check aborted state - method prevents ESLint from static flow analysis across async boundaries */
+  private isAborted(): boolean {
+    return this.abortedFlag
+  }
 
   constructor(client: FlightSqlClient, query: string, options: SubscribeOptions = {}) {
     this.client = client
@@ -1625,7 +1630,7 @@ export class Subscription implements AsyncIterable<RecordBatch> {
     // Handle abort signal
     if (this.options.signal) {
       this.options.signal.addEventListener("abort", () => {
-        this.aborted = true
+        this.abortedFlag = true
         this.exchange?.cancel()
       })
     }
@@ -1683,14 +1688,13 @@ export class Subscription implements AsyncIterable<RecordBatch> {
     this.iterating = true
 
     try {
-      while (!this.aborted) {
+      while (!this.isAborted()) {
         try {
           yield* this.streamBatches()
           // Stream completed normally
           break
         } catch (error: unknown) {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime check for aborted state
-          if (this.aborted) {
+          if (this.isAborted()) {
             break
           }
           if (!this.options.autoReconnect) {
@@ -1715,7 +1719,7 @@ export class Subscription implements AsyncIterable<RecordBatch> {
    * Unsubscribe and close the connection
    */
   async unsubscribe(): Promise<void> {
-    this.aborted = true
+    this.abortedFlag = true
     await this.cleanup()
   }
 
@@ -1727,7 +1731,7 @@ export class Subscription implements AsyncIterable<RecordBatch> {
     }
 
     for await (const flightData of this.exchange) {
-      if (this.aborted) {
+      if (this.isAborted()) {
         break
       }
 
@@ -1759,8 +1763,7 @@ export class Subscription implements AsyncIterable<RecordBatch> {
         }
       }
 
-      // Parse data if present -- eslint-disable-next-line requires runtime check
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- dataHeader may be empty Uint8Array
+      // Parse data if present
       if (flightData.dataHeader && flightData.dataHeader.length > 0) {
         const batches = this.parseFlightDataToBatches(flightData)
         for (const batch of batches) {
@@ -1849,7 +1852,6 @@ export class Subscription implements AsyncIterable<RecordBatch> {
   private parseFlightDataToBatches(flightData: FlightData): RecordBatch[] {
     const batches: RecordBatch[] = []
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime check for empty data
     if (!flightData.dataHeader || flightData.dataHeader.length === 0) {
       return batches
     }
@@ -1858,7 +1860,6 @@ export class Subscription implements AsyncIterable<RecordBatch> {
       // Frame the raw flatbuffer with IPC continuation marker
       const framed = this.frameAsIPC(
         flightData.dataHeader,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- may be undefined at runtime
         flightData.dataBody ?? new Uint8Array(0)
       )
 

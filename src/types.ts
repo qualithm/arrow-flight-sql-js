@@ -164,13 +164,13 @@ export interface FlightData {
   flightDescriptor?: FlightDescriptor
 
   /** Message header as described in Message.fbs */
-  dataHeader: Uint8Array
+  dataHeader?: Uint8Array
 
   /** Application-defined metadata */
   appMetadata?: Uint8Array
 
   /** The actual Arrow data batch */
-  dataBody: Uint8Array
+  dataBody?: Uint8Array
 }
 
 /**
@@ -421,7 +421,6 @@ export interface RetryOptions {
 /**
  * Subscription mode for real-time data streaming
  */
-/* eslint-disable @typescript-eslint/naming-convention */
 export const SubscriptionMode = {
   /** Receive all existing data plus new changes */
   FULL: "FULL",
@@ -430,7 +429,6 @@ export const SubscriptionMode = {
   /** Tail the end of a dataset and receive new appends */
   TAIL: "TAIL"
 } as const
-/* eslint-enable @typescript-eslint/naming-convention */
 
 export type SubscriptionMode = (typeof SubscriptionMode)[keyof typeof SubscriptionMode]
 
