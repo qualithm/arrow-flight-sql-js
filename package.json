@@ -17,7 +17,7 @@
   "author": "Qualithm",
   "repository": {
     "type": "git",
-    "url": "https://github.com/qualithm/arrow-flight-sql-js.git"
+    "url": "git+https://github.com/qualithm/arrow-flight-sql-js.git"
   },
   "homepage": "https://github.com/qualithm/arrow-flight-sql-js#readme",
   "bugs": {
