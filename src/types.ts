@@ -423,11 +423,11 @@ export interface RetryOptions {
  */
 export const SubscriptionMode = {
   /** Receive all existing data plus new changes */
-  FULL: "FULL",
+  Full: "FULL",
   /** Receive only new changes after subscription starts */
-  CHANGES_ONLY: "CHANGES_ONLY",
+  ChangesOnly: "CHANGES_ONLY",
   /** Tail the end of a dataset and receive new appends */
-  TAIL: "TAIL"
+  Tail: "TAIL"
 } as const
 
 export type SubscriptionMode = (typeof SubscriptionMode)[keyof typeof SubscriptionMode]

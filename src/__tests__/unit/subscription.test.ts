@@ -8,16 +8,16 @@ import type { SubscriptionMetadata } from "../../types"
 import { SubscriptionMessageType, SubscriptionMode } from "../../types"
 
 describe("SubscriptionMode", () => {
-  test("should have FULL mode", () => {
-    expect(SubscriptionMode.FULL).toBe("FULL")
+  test("should have Full mode", () => {
+    expect(SubscriptionMode.Full).toBe("FULL")
   })
 
-  test("should have CHANGES_ONLY mode", () => {
-    expect(SubscriptionMode.CHANGES_ONLY).toBe("CHANGES_ONLY")
+  test("should have ChangesOnly mode", () => {
+    expect(SubscriptionMode.ChangesOnly).toBe("CHANGES_ONLY")
   })
 
-  test("should have TAIL mode", () => {
-    expect(SubscriptionMode.TAIL).toBe("TAIL")
+  test("should have Tail mode", () => {
+    expect(SubscriptionMode.Tail).toBe("TAIL")
   })
 })
 
@@ -52,11 +52,13 @@ describe("Subscription metadata encoding", () => {
     const metadata: SubscriptionMetadata = {
       type: SubscriptionMessageType.SUBSCRIBE,
       query: "SELECT * FROM events",
-      mode: SubscriptionMode.CHANGES_ONLY
+      mode: SubscriptionMode.ChangesOnly
     }
 
     const encoded = new TextEncoder().encode(JSON.stringify(metadata))
-    const decoded = JSON.parse(new TextDecoder().decode(encoded)) as SubscriptionMetadata
+    const decoded: SubscriptionMetadata = JSON.parse(
+      new TextDecoder().decode(encoded)
+    ) as SubscriptionMetadata
 
     expect(decoded.type).toBe("SUBSCRIBE")
     expect(decoded.query).toBe("SELECT * FROM events")
@@ -70,7 +72,9 @@ describe("Subscription metadata encoding", () => {
     }
 
     const encoded = new TextEncoder().encode(JSON.stringify(metadata))
-    const decoded = JSON.parse(new TextDecoder().decode(encoded)) as SubscriptionMetadata
+    const decoded: SubscriptionMetadata = JSON.parse(
+      new TextDecoder().decode(encoded)
+    ) as SubscriptionMetadata
 
     expect(decoded.type).toBe("HEARTBEAT")
     expect(typeof decoded.timestamp).toBe("number")
@@ -84,7 +88,9 @@ describe("Subscription metadata encoding", () => {
     }
 
     const encoded = new TextEncoder().encode(JSON.stringify(metadata))
-    const decoded = JSON.parse(new TextDecoder().decode(encoded)) as SubscriptionMetadata
+    const decoded: SubscriptionMetadata = JSON.parse(
+      new TextDecoder().decode(encoded)
+    ) as SubscriptionMetadata
 
     expect(decoded.type).toBe("UNSUBSCRIBE")
     expect(decoded.subscriptionId).toBe("sub-123")
@@ -97,7 +103,9 @@ describe("Subscription metadata encoding", () => {
     }
 
     const encoded = new TextEncoder().encode(JSON.stringify(metadata))
-    const decoded = JSON.parse(new TextDecoder().decode(encoded)) as SubscriptionMetadata
+    const decoded: SubscriptionMetadata = JSON.parse(
+      new TextDecoder().decode(encoded)
+    ) as SubscriptionMetadata
 
     expect(decoded.type).toBe("ERROR")
     expect(decoded.error).toBe("Query execution failed: table not found")
@@ -110,7 +118,9 @@ describe("Subscription metadata encoding", () => {
     }
 
     const encoded = new TextEncoder().encode(JSON.stringify(metadata))
-    const decoded = JSON.parse(new TextDecoder().decode(encoded)) as SubscriptionMetadata
+    const decoded: SubscriptionMetadata = JSON.parse(
+      new TextDecoder().decode(encoded)
+    ) as SubscriptionMetadata
 
     expect(decoded.type).toBe("COMPLETE")
     expect(decoded.subscriptionId).toBe("sub-123")
@@ -118,10 +128,10 @@ describe("Subscription metadata encoding", () => {
 })
 
 describe("Subscription default options", () => {
-  test("default mode should be CHANGES_ONLY", () => {
+  test("default mode should be ChangesOnly", () => {
     // Based on Subscription constructor defaults
     const defaults = {
-      mode: SubscriptionMode.CHANGES_ONLY,
+      mode: SubscriptionMode.ChangesOnly,
       heartbeatMs: 30_000,
       autoReconnect: true,
       maxReconnectAttempts: 10,
@@ -129,7 +139,7 @@ describe("Subscription default options", () => {
       maxReconnectDelayMs: 30_000
     }
 
-    expect(defaults.mode).toBe(SubscriptionMode.CHANGES_ONLY)
+    expect(defaults.mode).toBe(SubscriptionMode.ChangesOnly)
   })
 
   test("default heartbeat interval should be 30 seconds", () => {
@@ -163,7 +173,7 @@ describe("Subscription command encoding", () => {
     const request: SubscriptionMetadata & { heartbeatMs?: number } = {
       type: SubscriptionMessageType.SUBSCRIBE,
       query: "SELECT * FROM my_table WHERE active = true",
-      mode: SubscriptionMode.FULL,
+      mode: SubscriptionMode.Full,
       heartbeatMs: 15_000
     }
 
@@ -175,7 +185,7 @@ describe("Subscription command encoding", () => {
     }
     expect(decoded.type).toBe("SUBSCRIBE")
     expect(decoded.query).toBe("SELECT * FROM my_table WHERE active = true")
-    expect(decoded.mode).toBe("FULL")
+    expect(decoded.mode).toBe("FULL") // Raw wire value, not property name
     expect(decoded.heartbeatMs).toBe(15_000)
   })
 
@@ -202,7 +212,7 @@ describe("Subscription command encoding", () => {
     const request: ExtendedMetadata = {
       type: SubscriptionMessageType.SUBSCRIBE,
       query: "SELECT * FROM events",
-      mode: SubscriptionMode.TAIL,
+      mode: SubscriptionMode.Tail,
       metadata: {
         clientId: "client-123",
         version: "1.0.0"

@@ -147,3 +147,29 @@ export type {
 
 // Re-export DescriptorType and subscription constants (needed for runtime)
 export { DescriptorType, SubscriptionMessageType, SubscriptionMode } from "./types"
+
+// Query builder
+export type {
+  BuiltQuery,
+  ColumnSpec,
+  ComparisonOperator,
+  JoinSpec,
+  JoinType,
+  LogicalOperator,
+  OrderSpec,
+  RawExpression,
+  SortDirection,
+  SqlValue,
+  WhereCondition
+} from "./query-builder"
+export {
+  deleteFrom,
+  escapeIdentifier,
+  escapeString,
+  formatValue,
+  insertInto,
+  QueryBuilder,
+  raw,
+  select,
+  update
+} from "./query-builder"

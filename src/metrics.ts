@@ -150,15 +150,15 @@ export interface MetricsHandler {
  * Used when no metrics handler is configured.
  */
 export class NoopMetricsHandler implements MetricsHandler {
-  recordOperation(_event: MetricEvent): void {
+  recordOperation(_: MetricEvent): void {
     // Intentionally empty
   }
 
-  recordGauge(_event: GaugeEvent): void {
+  recordGauge(_: GaugeEvent): void {
     // Intentionally empty
   }
 
-  recordCounter(_event: CounterEvent): void {
+  recordCounter(_: CounterEvent): void {
     // Intentionally empty
   }
 }

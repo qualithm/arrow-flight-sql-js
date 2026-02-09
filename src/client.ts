@@ -1619,7 +1619,7 @@ export class Subscription implements AsyncIterable<RecordBatch> {
     this.query = query
     this.options = {
       ...options,
-      mode: options.mode ?? SubscriptionMode.CHANGES_ONLY,
+      mode: options.mode ?? SubscriptionMode.ChangesOnly,
       heartbeatMs: options.heartbeatMs ?? 30_000,
       autoReconnect: options.autoReconnect ?? true,
       maxReconnectAttempts: options.maxReconnectAttempts ?? 10,

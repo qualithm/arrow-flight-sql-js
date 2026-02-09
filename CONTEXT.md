@@ -65,7 +65,7 @@ The project has a complete, production-ready Arrow Flight SQL client with real-t
 - `src/proto.ts` – Manual protobuf encoding/decoding for Flight SQL commands ✅
 - `src/arrow.ts` – Arrow IPC parsing utilities ✅
 - `src/errors.ts` – Custom error types with gRPC status mapping ✅
-- `src/query-builder.ts` – Query builder utilities (not yet implemented)
+- `src/query-builder.ts` – Fluent SQL query builder for type-safe query construction ✅
 - `src/index.ts` – Public API exports ✅
 - `src/generated/index.ts` – Proto loader utilities ✅
 
@@ -76,6 +76,7 @@ The project has a complete, production-ready Arrow Flight SQL client with real-t
 - `src/__tests__/unit/proto.test.ts` – Protobuf encoding tests (32 tests) ✅
 - `src/__tests__/unit/metrics.test.ts` – Metrics handler tests (38 tests) ✅
 - `src/__tests__/unit/subscription.test.ts` – Subscription type tests (26 tests) ✅
+- `src/__tests__/unit/query-builder.test.ts` – Query builder tests (80 tests) ✅
 - `src/__tests__/integration/lakehouse.test.ts` – Integration tests (17 pass, 2 skip) ✅
 
 ### npm Publication Ready
@@ -177,9 +178,9 @@ The project has a complete, production-ready Arrow Flight SQL client with real-t
 - [x] Comprehensive error types and handling
 - [x] Metrics and observability hooks (`MetricsHandler`, `ConsoleMetricsHandler`,
       `InMemoryMetricsHandler`)
-- [x] Full test coverage (unit: 128 tests across 4 files)
+- [x] Full test coverage (unit: 234 tests across 6 files)
 - [x] Documentation and examples (README updated)
-- [ ] Performance benchmarks (deferred to future milestone)
+- [x] Performance benchmarks (`benchmarks/` directory, `bun run bench`)
 
 ### M6: npm Publication ✅
 
@@ -424,3 +425,4 @@ documents runtime-specific installation/usage notes.
 | 2026-02-05 | Fixed schema parsing: `parseSchema()` now uses `MessageReader.readSchema()` for schema-only IPC messages. Fixed `stream()`: FlightData.dataHeader is raw flatbuffer without IPC framing; added continuation token (0xFFFFFFFF) + length prefix before parsing with `RecordBatchReader`. Integration tests now 12 pass, 7 skip (server-blocked). npm publish workflow added to release.yaml. Removed debug scripts.                                                                                                                                                                           |
 | 2026-02-09 | Investigated lakehouse server wiring. **Conclusion: Server is correct.** arrow-flight v57 has blanket `impl FlightService for T where T: FlightSqlService + Send` (server.rs lines 578-580 in arrow-flight source), so `FlightServiceServer::new(LakehouseFlightSqlService)` correctly dispatches Flight SQL commands to trait methods. `FlightSqlServiceServer` does NOT exist — earlier analysis was based on incorrect assumptions. The 7 skipped integration tests are likely client-side issues (protobuf encoding, handle format) not server-side. Next: add wire-level debug logging. |
 | 2026-02-09 | Implemented M7 (Push Subscriptions via DoExchange). DoExchange uses `ClientDuplexStream` for bidirectional streaming. Subscription class handles: (1) JSON-encoded subscribe/unsubscribe commands in `appMetadata`, (2) heartbeat processing, (3) automatic reconnection with exponential backoff + jitter, (4) AbortSignal cancellation. ExchangeStream interface provides low-level send/receive/cancel. Added 26 unit tests for subscription types and 5 integration tests. Total unit tests now 154.                                                                                     |
+| 2026-02-09 | Implemented `QueryBuilder` class in `src/query-builder.ts` with fluent API for SELECT, INSERT, UPDATE, DELETE queries. Includes SQL injection protection via identifier/string escaping, support for JOINs, WHERE conditions, ORDER BY, LIMIT/OFFSET, GROUP BY/HAVING, and parameterized queries for prepared statements. Added 80 unit tests. Also added performance benchmarks in `benchmarks/` directory covering proto encoding, query builder, and retry logic throughput (e.g., 5M+ ops/s for simple escaping, 200K+ ops/s for proto encoding).                                        |

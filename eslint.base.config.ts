@@ -68,6 +68,19 @@ export const namingConventionBase = [
   { selector: "property", format: ["camelCase", "PascalCase"] },
   { selector: "property", modifiers: ["requiresQuotes"], format: null },
   { selector: "property", format: null, filter: { regex: "^[A-Z][A-Z0-9_]*$", match: true } },
+  // Allow private class properties with leading underscore
+  {
+    selector: "classProperty",
+    modifiers: ["private"],
+    format: ["camelCase"],
+    leadingUnderscore: "allow"
+  },
+  // Allow double-underscore markers for type guards (e.g., __raw, __brand)
+  {
+    selector: ["property", "typeProperty", "objectLiteralProperty"],
+    format: null,
+    filter: { regex: "^__[a-z]+$", match: true }
+  },
 
   { selector: "default", format: ["camelCase"] }
 ] as const
