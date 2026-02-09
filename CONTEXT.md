@@ -185,7 +185,7 @@ The project has a complete, production-ready Arrow Flight SQL client:
 - [x] Verify interop with lakehouse server (connection, error handling working)
 - [x] npm package configuration (package.json, tsconfig.build.json, LICENSE)
 - [x] Build system for distribution (`bun run build` → `dist/`)
-- [ ] Publish `@qualithm/arrow-flight-sql-js` to npm (blocked: npm auth)
+- [x] Publish `@qualithm/arrow-flight-sql-js` to npm (via `.github/workflows/release.yaml`)
 - [x] TypeDoc API documentation generation (`bun run docs` → `docs/api/`)
 - [x] GitHub Pages deployment workflow (`.github/workflows/docs.yaml`)
 
