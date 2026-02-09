@@ -23,6 +23,9 @@ jobs:
     if:
       ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion ==
       'success' }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -59,9 +62,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.version_check.outputs.exists == 'false'
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
 
   deploy_docs:
     name: Deploy Docs
