@@ -28,7 +28,8 @@
  */
 
 // Main client and result classes
-export { FlightSqlClient, PreparedStatement, QueryResult } from "./client"
+export type { ExchangeStream } from "./client"
+export { FlightSqlClient, PreparedStatement, QueryResult, Subscription } from "./client"
 
 // Error types
 export {
@@ -134,11 +135,15 @@ export type {
   RetryOptions,
   SchemaInfo,
   SchemaResult,
+  // Subscription types
+  SubscribeOptions,
+  SubscriptionHandle,
+  SubscriptionMetadata,
   TableInfo,
   TableType,
   Ticket,
   UpdateResult
 } from "./types"
 
-// Re-export DescriptorType (needed for runtime)
-export { DescriptorType } from "./types"
+// Re-export DescriptorType and subscription constants (needed for runtime)
+export { DescriptorType, SubscriptionMessageType, SubscriptionMode } from "./types"

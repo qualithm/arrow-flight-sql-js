@@ -35,6 +35,7 @@ import type {
   CatalogInfo,
   DescriptorType,
   ExecuteOptions,
+  FlightData,
   FlightDescriptor,
   FlightInfo,
   FlightSqlClientOptions,
@@ -43,10 +44,13 @@ import type {
   PrimaryKeyInfo,
   SchemaInfo,
   SchemaResult,
+  SubscribeOptions,
+  SubscriptionMetadata,
   TableInfo,
   TableType,
   Ticket
 } from "./types"
+import { SubscriptionMessageType, SubscriptionMode } from "./types"
 
 // Default configuration values
 const defaultConnectTimeoutMs = 30_000
@@ -804,6 +808,159 @@ export class FlightSqlClient {
   }
 
   /**
+   * Open a bidirectional data exchange with the server.
+   *
+   * This is the low-level API for DoExchange. For real-time subscriptions,
+   * use the higher-level `subscribe()` method instead.
+   *
+   * @param descriptor - Flight descriptor for the exchange
+   * @returns An exchange handle for sending and receiving FlightData
+   *
+   * @example
+   * ```typescript
+   * const exchange = client.doExchange({
+   *   type: DescriptorType.CMD,
+   *   cmd: new TextEncoder().encode('SUBSCRIBE:my_topic')
+   * })
+   *
+   * // Send initial request
+   * await exchange.send({ appMetadata: subscribeCommand })
+   *
+   * // Receive responses
+   * for await (const data of exchange) {
+   *   if (data.dataHeader) {
+   *     // Process record batch
+   *   }
+   * }
+   *
+   * // Clean up
+   * await exchange.end()
+   * ```
+   */
+  doExchange(descriptor: FlightDescriptor): ExchangeStream {
+    this.ensureConnected()
+
+    const client = this.grpcClient as grpc.Client & {
+      doExchange: (metadata: grpc.Metadata) => grpc.ClientDuplexStream<unknown, unknown>
+    }
+
+    const metadata = this.createRequestMetadata()
+    const stream = client.doExchange(metadata)
+
+    // Use object wrapper to track errors
+    const errorState = { error: null as Error | null }
+    stream.on("error", (err: Error) => {
+      errorState.error = err
+    })
+
+    // Capture references for closure
+    const wrapGrpcError = this.wrapGrpcError.bind(this)
+    const serializeFlightDescriptor = this.serializeFlightDescriptor.bind(this)
+    const wrapStream = this.wrapStream.bind(this) as (
+      s: grpc.ClientReadableStream<unknown>
+    ) => AsyncGenerator<unknown, void, unknown>
+
+    // Create the exchange handle
+    const exchange: ExchangeStream = {
+      send(data: FlightData): Promise<void> {
+        if (errorState.error) {
+          throw wrapGrpcError(errorState.error as grpc.ServiceError)
+        }
+        stream.write({
+          flightDescriptor: data.flightDescriptor
+            ? serializeFlightDescriptor(data.flightDescriptor)
+            : undefined,
+          dataHeader: data.dataHeader,
+          dataBody: data.dataBody,
+          appMetadata: data.appMetadata
+        })
+        return Promise.resolve()
+      },
+
+      end(): Promise<void> {
+        stream.end()
+        return Promise.resolve()
+      },
+
+      cancel(): void {
+        stream.cancel()
+      },
+
+      async *[Symbol.asyncIterator](): AsyncGenerator<FlightData, void, unknown> {
+        try {
+          for await (const data of wrapStream(stream)) {
+            const flightData = data as {
+              flightDescriptor?: { type: number; cmd?: Uint8Array; path?: string[] }
+              dataHeader?: Uint8Array
+              dataBody?: Uint8Array
+              appMetadata?: Uint8Array
+            }
+            yield {
+              flightDescriptor: flightData.flightDescriptor
+                ? {
+                    type: flightData.flightDescriptor.type as DescriptorType,
+                    cmd: flightData.flightDescriptor.cmd,
+                    path: flightData.flightDescriptor.path
+                  }
+                : undefined,
+              dataHeader: flightData.dataHeader ?? new Uint8Array(),
+              dataBody: flightData.dataBody ?? new Uint8Array(),
+              appMetadata: flightData.appMetadata
+            }
+          }
+        } catch (error) {
+          if (errorState.error) {
+            throw wrapGrpcError(errorState.error as grpc.ServiceError)
+          }
+          throw error
+        }
+      }
+    }
+
+    // Send descriptor in first message (empty data)
+    stream.write({
+      flightDescriptor: this.serializeFlightDescriptor(descriptor)
+    })
+
+    return exchange
+  }
+
+  /**
+   * Subscribe to real-time data updates from a query.
+   *
+   * Returns a Subscription that yields RecordBatches as they arrive from the server.
+   * Automatically handles heartbeats and can reconnect on connection loss.
+   *
+   * @param query - SQL query to subscribe to
+   * @param options - Subscription options
+   * @returns Subscription handle for receiving batches and control
+   *
+   * @example
+   * ```typescript
+   * const subscription = await client.subscribe(
+   *   "SELECT * FROM events WHERE status = 'pending'",
+   *   { mode: 'CHANGES_ONLY', heartbeatMs: 30000 }
+   * )
+   *
+   * for await (const batch of subscription) {
+   *   console.log(`Received ${batch.numRows} rows`)
+   * }
+   *
+   * // Or with AbortController
+   * const controller = new AbortController()
+   * const subscription = await client.subscribe(query, {
+   *   signal: controller.signal
+   * })
+   *
+   * // Later: cancel the subscription
+   * controller.abort()
+   * ```
+   */
+  subscribe(query: string, options: SubscribeOptions = {}): Subscription {
+    return new Subscription(this, query, options)
+  }
+
+  /**
    * Helper to get the first item from an async iterable without consuming the rest
    */
   private async getFirstFromIterable<T>(iterable: AsyncIterable<T>): Promise<T | undefined> {
@@ -1377,4 +1534,376 @@ export class PreparedStatement {
 interface FlightSqlClientInternal extends FlightSqlClient {
   getFlightInfo(descriptor: FlightDescriptor): Promise<FlightInfo>
   doAction(action: Action): AsyncGenerator<ActionResult, void, unknown>
+  doExchange(descriptor: FlightDescriptor): ExchangeStream
+}
+
+// ============================================================================
+// ExchangeStream
+// ============================================================================
+
+/**
+ * Handle for a bidirectional DoExchange stream.
+ *
+ * Allows sending and receiving FlightData messages over a single connection.
+ */
+export interface ExchangeStream extends AsyncIterable<FlightData> {
+  /**
+   * Send a FlightData message to the server
+   */
+  send(data: FlightData): Promise<void>
+
+  /**
+   * Signal the end of client-side writes (half-close)
+   */
+  end(): Promise<void>
+
+  /**
+   * Cancel the stream immediately
+   */
+  cancel(): void
+}
+
+// ============================================================================
+// Subscription
+// ============================================================================
+
+/**
+ * Real-time subscription to query results via DoExchange.
+ *
+ * Yields RecordBatches as they arrive from the server. Handles heartbeats
+ * automatically and can reconnect on transient connection failures.
+ *
+ * @example
+ * ```typescript
+ * const subscription = client.subscribe("SELECT * FROM events")
+ *
+ * for await (const batch of subscription) {
+ *   console.log(`Received ${batch.numRows} rows`)
+ * }
+ *
+ * await subscription.unsubscribe()
+ * ```
+ */
+export class Subscription implements AsyncIterable<RecordBatch> {
+  private readonly client: FlightSqlClient
+  private readonly query: string
+  private readonly options: Required<
+    Pick<
+      SubscribeOptions,
+      | "mode"
+      | "heartbeatMs"
+      | "autoReconnect"
+      | "maxReconnectAttempts"
+      | "reconnectDelayMs"
+      | "maxReconnectDelayMs"
+    >
+  > &
+    SubscribeOptions
+
+  private exchange: ExchangeStream | null = null
+  private subscriptionId: string | null = null
+  private connectedState = false
+  private batchesReceivedCount = 0
+  private reconnectAttempts = 0
+  private aborted = false
+  private lastHeartbeat: number = Date.now()
+  private iterating = false
+
+  constructor(client: FlightSqlClient, query: string, options: SubscribeOptions = {}) {
+    this.client = client
+    this.query = query
+    this.options = {
+      ...options,
+      mode: options.mode ?? SubscriptionMode.CHANGES_ONLY,
+      heartbeatMs: options.heartbeatMs ?? 30_000,
+      autoReconnect: options.autoReconnect ?? true,
+      maxReconnectAttempts: options.maxReconnectAttempts ?? 10,
+      reconnectDelayMs: options.reconnectDelayMs ?? 1_000,
+      maxReconnectDelayMs: options.maxReconnectDelayMs ?? 30_000
+    }
+
+    // Handle abort signal
+    if (this.options.signal) {
+      this.options.signal.addEventListener("abort", () => {
+        this.aborted = true
+        this.exchange?.cancel()
+      })
+    }
+  }
+
+  /**
+   * Unique ID for this subscription (assigned by server after connect)
+   */
+  get id(): string {
+    return this.subscriptionId ?? ""
+  }
+
+  /**
+   * Whether the subscription is currently connected
+   */
+  get connected(): boolean {
+    return this.connectedState
+  }
+
+  /**
+   * Number of batches received
+   */
+  get batchesReceived(): number {
+    return this.batchesReceivedCount
+  }
+
+  /**
+   * Number of reconnection attempts
+   */
+  get reconnectCount(): number {
+    return this.reconnectAttempts
+  }
+
+  /**
+   * Timestamp of the last heartbeat received from the server
+   */
+  get lastHeartbeatTime(): number {
+    return this.lastHeartbeat
+  }
+
+  /**
+   * Time in milliseconds since the last heartbeat
+   */
+  get timeSinceLastHeartbeat(): number {
+    return Date.now() - this.lastHeartbeat
+  }
+
+  /**
+   * Start the subscription and iterate over incoming batches
+   */
+  async *[Symbol.asyncIterator](): AsyncGenerator<RecordBatch, void, unknown> {
+    if (this.iterating) {
+      throw new FlightSqlError("Subscription is already being iterated")
+    }
+    this.iterating = true
+
+    try {
+      while (!this.aborted) {
+        try {
+          yield* this.streamBatches()
+          // Stream completed normally
+          break
+        } catch (error: unknown) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime check for aborted state
+          if (this.aborted) {
+            break
+          }
+          if (!this.options.autoReconnect) {
+            throw error
+          }
+          if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
+            throw new FlightSqlError(
+              `Max reconnection attempts (${String(this.options.maxReconnectAttempts)}) exceeded`,
+              { cause: error instanceof Error ? error : new Error(String(error)) }
+            )
+          }
+          await this.reconnect()
+        }
+      }
+    } finally {
+      this.iterating = false
+      await this.cleanup()
+    }
+  }
+
+  /**
+   * Unsubscribe and close the connection
+   */
+  async unsubscribe(): Promise<void> {
+    this.aborted = true
+    await this.cleanup()
+  }
+
+  private async *streamBatches(): AsyncGenerator<RecordBatch, void, unknown> {
+    this.initConnection()
+
+    if (!this.exchange) {
+      throw new FlightSqlError("Exchange not initialized")
+    }
+
+    for await (const flightData of this.exchange) {
+      if (this.aborted) {
+        break
+      }
+
+      // Check for metadata messages (heartbeat, control messages)
+      if (flightData.appMetadata && flightData.appMetadata.length > 0) {
+        const metadata = this.parseMetadata(flightData.appMetadata)
+
+        switch (metadata.type) {
+          case SubscriptionMessageType.HEARTBEAT:
+            this.lastHeartbeat = Date.now()
+            continue
+
+          case SubscriptionMessageType.COMPLETE:
+            return
+
+          case SubscriptionMessageType.ERROR:
+            throw new FlightSqlError(metadata.error ?? "Subscription error from server")
+
+          case SubscriptionMessageType.DATA:
+            // Continue to parse data
+            if (metadata.subscriptionId && !this.subscriptionId) {
+              this.subscriptionId = metadata.subscriptionId
+            }
+            break
+
+          default:
+            // Unknown message type, continue
+            break
+        }
+      }
+
+      // Parse data if present -- eslint-disable-next-line requires runtime check
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- dataHeader may be empty Uint8Array
+      if (flightData.dataHeader && flightData.dataHeader.length > 0) {
+        const batches = this.parseFlightDataToBatches(flightData)
+        for (const batch of batches) {
+          this.batchesReceivedCount++
+          yield batch
+        }
+      }
+    }
+  }
+
+  private initConnection(): void {
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: this.encodeSubscribeCommand()
+    }
+
+    this.exchange = (this.client as FlightSqlClientInternal).doExchange(descriptor)
+    this.connectedState = true
+    this.lastHeartbeat = Date.now()
+  }
+
+  private async reconnect(): Promise<void> {
+    this.reconnectAttempts++
+    this.connectedState = false
+
+    // Calculate backoff delay with jitter
+    const baseDelay = Math.min(
+      this.options.reconnectDelayMs * Math.pow(2, this.reconnectAttempts - 1),
+      this.options.maxReconnectDelayMs
+    )
+    const jitter = Math.random() * baseDelay * 0.1
+    const delay = baseDelay + jitter
+
+    await this.sleep(delay)
+
+    this.initConnection()
+  }
+
+  private async cleanup(): Promise<void> {
+    if (this.exchange && this.connectedState) {
+      try {
+        // Send unsubscribe message
+        await this.exchange.send({
+          dataHeader: new Uint8Array(),
+          dataBody: new Uint8Array(),
+          appMetadata: this.encodeMetadata({
+            type: SubscriptionMessageType.UNSUBSCRIBE,
+            subscriptionId: this.subscriptionId ?? undefined,
+            timestamp: Date.now()
+          })
+        })
+        await this.exchange.end()
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+    this.connectedState = false
+    this.exchange = null
+  }
+
+  private encodeSubscribeCommand(): Uint8Array {
+    // Encode subscription request as JSON in the command
+    const request = {
+      type: SubscriptionMessageType.SUBSCRIBE,
+      query: this.query,
+      mode: this.options.mode,
+      heartbeatMs: this.options.heartbeatMs,
+      metadata: this.options.metadata
+    }
+    return new TextEncoder().encode(JSON.stringify(request))
+  }
+
+  private encodeMetadata(metadata: SubscriptionMetadata): Uint8Array {
+    return new TextEncoder().encode(JSON.stringify(metadata))
+  }
+
+  private parseMetadata(data: Uint8Array): SubscriptionMetadata {
+    try {
+      const text = new TextDecoder().decode(data)
+      return JSON.parse(text) as SubscriptionMetadata
+    } catch {
+      return { type: SubscriptionMessageType.DATA }
+    }
+  }
+
+  private parseFlightDataToBatches(flightData: FlightData): RecordBatch[] {
+    const batches: RecordBatch[] = []
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime check for empty data
+    if (!flightData.dataHeader || flightData.dataHeader.length === 0) {
+      return batches
+    }
+
+    try {
+      // Frame the raw flatbuffer with IPC continuation marker
+      const framed = this.frameAsIPC(
+        flightData.dataHeader,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- may be undefined at runtime
+        flightData.dataBody ?? new Uint8Array(0)
+      )
+
+      const reader = RecordBatchReader.from(framed)
+      for (const batch of reader) {
+        batches.push(batch)
+      }
+    } catch {
+      // If parsing fails, return empty
+    }
+
+    return batches
+  }
+
+  private frameAsIPC(header: Uint8Array, body: Uint8Array): Uint8Array {
+    const continuationToken = new Uint8Array([0xff, 0xff, 0xff, 0xff])
+    const metadataLength = new Uint8Array(4)
+    new DataView(metadataLength.buffer).setInt32(0, header.length, true)
+
+    const headerPadding = (8 - ((header.length + 4 + 4) % 8)) % 8
+    const padding = new Uint8Array(headerPadding)
+
+    const totalLength =
+      continuationToken.length +
+      metadataLength.length +
+      header.length +
+      padding.length +
+      body.length
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+
+    result.set(continuationToken, offset)
+    offset += continuationToken.length
+    result.set(metadataLength, offset)
+    offset += metadataLength.length
+    result.set(header, offset)
+    offset += header.length
+    result.set(padding, offset)
+    offset += padding.length
+    result.set(body, offset)
+
+    return result
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
 }

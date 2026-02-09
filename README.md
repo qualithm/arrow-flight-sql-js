@@ -101,6 +101,86 @@ const results = await pool.withClient(async (client) => {
 await pool.close()
 ```
 
+## Real-Time Subscriptions
+
+Subscribe to live data updates using the `DoExchange` bidirectional streaming protocol:
+
+```typescript
+import { FlightSqlClient, SubscriptionMode } from "@qualithm/arrow-flight-sql-js"
+
+const client = new FlightSqlClient({
+  host: "localhost",
+  port: 31337,
+  tls: true,
+  token: "your-bearer-token"
+})
+
+await client.connect()
+
+// Subscribe to real-time updates
+const subscription = client.subscribe("SELECT * FROM events WHERE status = 'pending'", {
+  mode: SubscriptionMode.CHANGES_ONLY, // 'FULL' | 'CHANGES_ONLY' | 'TAIL'
+  heartbeatMs: 30_000 // Server heartbeat interval
+})
+
+// Consume batches as they arrive
+for await (const batch of subscription) {
+  console.log(`Received ${batch.numRows} rows`)
+}
+
+// Or with cancellation
+const controller = new AbortController()
+const subscription = client.subscribe(query, {
+  signal: controller.signal,
+  autoReconnect: true,
+  maxReconnectAttempts: 10
+})
+
+// Later: cancel the subscription
+controller.abort()
+
+// Or manually unsubscribe
+await subscription.unsubscribe()
+```
+
+### Subscription Options
+
+| Option                 | Default        | Description                                        |
+| ---------------------- | -------------- | -------------------------------------------------- |
+| `mode`                 | `CHANGES_ONLY` | Subscription mode (FULL, CHANGES_ONLY, TAIL)       |
+| `heartbeatMs`          | `30000`        | Server heartbeat interval in milliseconds          |
+| `signal`               | -              | AbortSignal for cancellation                       |
+| `autoReconnect`        | `true`         | Auto-reconnect on connection loss                  |
+| `maxReconnectAttempts` | `10`           | Maximum reconnection attempts                      |
+| `reconnectDelayMs`     | `1000`         | Initial reconnect delay                            |
+| `maxReconnectDelayMs`  | `30000`        | Maximum reconnect delay (with exponential backoff) |
+
+### Low-Level DoExchange
+
+For custom bidirectional protocols:
+
+```typescript
+const exchange = client.doExchange({
+  type: DescriptorType.CMD,
+  cmd: new TextEncoder().encode("CUSTOM_COMMAND")
+})
+
+// Send data to server
+await exchange.send({
+  dataHeader: new Uint8Array(),
+  dataBody: new Uint8Array(),
+  appMetadata: new TextEncoder().encode(JSON.stringify({ action: "subscribe" }))
+})
+
+// Receive data from server
+for await (const data of exchange) {
+  console.log("Received:", data)
+}
+
+// Half-close (signal end of client stream)
+await exchange.end()
+```
+
 ## Observability & Metrics
 
 Integrate with your observability stack using the metrics handler interface:

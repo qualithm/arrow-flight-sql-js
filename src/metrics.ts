@@ -35,6 +35,7 @@ export type OperationType =
   | "getSchema"
   | "doGet"
   | "doPut"
+  | "doExchange"
   | "doAction"
   | "getCatalogs"
   | "getSchemas"
@@ -47,6 +48,8 @@ export type OperationType =
   | "poolRelease"
   | "healthCheck"
   | "retry"
+  | "subscribe"
+  | "subscriptionReconnect"
 
 /**
  * Status of an operation
@@ -486,5 +489,11 @@ export const MetricNames = {
   bytesSent: "flight_sql.bytes.sent",
   retriesAttempted: "flight_sql.retries.attempted",
   connectionsCreated: "flight_sql.connections.created",
-  connectionsClosed: "flight_sql.connections.closed"
+  connectionsClosed: "flight_sql.connections.closed",
+
+  // Subscription counters and gauges
+  subscriptionBatchesReceived: "flight_sql.subscription.batches_received",
+  subscriptionReconnects: "flight_sql.subscription.reconnects",
+  subscriptionLatencyMs: "flight_sql.subscription.latency_ms",
+  activeSubscriptions: "flight_sql.subscription.active"
 } as const

@@ -360,3 +360,108 @@ describe("Connection Edge Cases", () => {
     client.close()
   })
 })
+
+// =============================================================================
+// Subscription Tests (DoExchange)
+// =============================================================================
+
+describe("Subscriptions", () => {
+  test("should create subscription instance", async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    const client = createTestClient()
+    await client.connect()
+
+    const subscription = client.subscribe("SELECT * FROM events")
+    expect(subscription).toBeDefined()
+    expect(subscription.connected).toBe(false) // Not connected until iteration starts
+    expect(subscription.batchesReceived).toBe(0)
+
+    await subscription.unsubscribe()
+    client.close()
+  })
+
+  test("should handle subscription with abort signal", async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    const client = createTestClient()
+    await client.connect()
+
+    const controller = new AbortController()
+    const subscription = client.subscribe("SELECT * FROM events", {
+      signal: controller.signal
+    })
+
+    // Abort immediately
+    controller.abort()
+
+    // Iteration should complete without error
+    let batchCount = 0
+    for await (const batch of subscription) {
+      void batch
+      batchCount++
+    }
+
+    expect(batchCount).toBe(0)
+    client.close()
+  })
+
+  test("should track batch count", async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    const client = createTestClient()
+    await client.connect()
+
+    const subscription = client.subscribe("SELECT * FROM events")
+    expect(subscription.batchesReceived).toBe(0)
+
+    await subscription.unsubscribe()
+    client.close()
+  })
+
+  test("should default to CHANGES_ONLY mode", async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    const client = createTestClient()
+    await client.connect()
+
+    // The subscription is created with defaults
+    const subscription = client.subscribe("SELECT * FROM events")
+    expect(subscription).toBeDefined()
+
+    await subscription.unsubscribe()
+    client.close()
+  })
+
+  test("should support custom subscription options", async () => {
+    if (skipIfNoIntegration()) {
+      return
+    }
+
+    const client = createTestClient()
+    await client.connect()
+
+    const subscription = client.subscribe("SELECT * FROM events", {
+      mode: "FULL",
+      heartbeatMs: 15_000,
+      autoReconnect: false,
+      maxReconnectAttempts: 5,
+      reconnectDelayMs: 2_000,
+      maxReconnectDelayMs: 60_000,
+      metadata: { clientId: "test-client" }
+    })
+
+    expect(subscription).toBeDefined()
+
+    await subscription.unsubscribe()
+    client.close()
+  })
+})

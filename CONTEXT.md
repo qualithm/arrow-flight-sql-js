@@ -52,15 +52,16 @@ consumer; the library must work with any compliant Flight SQL server.
 
 ## Current Reality
 
-**Status: M1+M2+M3+M4+M5+M6 Complete – Ready for npm Publication**
+**Status: M1+M2+M3+M4+M5+M6+M7 Complete – Full Push Subscription Support**
 
-The project has a complete, production-ready Arrow Flight SQL client:
+The project has a complete, production-ready Arrow Flight SQL client with real-time subscriptions:
 
-- `src/client.ts` – Main `FlightSqlClient`, `QueryResult`, `PreparedStatement` classes ✅
+- `src/client.ts` – Main `FlightSqlClient`, `QueryResult`, `PreparedStatement`, `Subscription`
+  classes ✅
 - `src/pool.ts` – Connection pool with health checking and graceful shutdown ✅
 - `src/retry.ts` – Retry logic with exponential backoff and jitter ✅
 - `src/metrics.ts` – Observability hooks with pluggable handlers ✅
-- `src/types.ts` – TypeScript type definitions for Flight SQL ✅
+- `src/types.ts` – TypeScript type definitions for Flight SQL + subscriptions ✅
 - `src/proto.ts` – Manual protobuf encoding/decoding for Flight SQL commands ✅
 - `src/arrow.ts` – Arrow IPC parsing utilities ✅
 - `src/errors.ts` – Custom error types with gRPC status mapping ✅
@@ -74,7 +75,8 @@ The project has a complete, production-ready Arrow Flight SQL client:
 - `src/__tests__/unit/retry.test.ts` – Retry logic tests (31 tests) ✅
 - `src/__tests__/unit/proto.test.ts` – Protobuf encoding tests (32 tests) ✅
 - `src/__tests__/unit/metrics.test.ts` – Metrics handler tests (38 tests) ✅
-- `src/__tests__/integration/lakehouse.test.ts` – Integration tests (12 pass, 7 skip) ✅
+- `src/__tests__/unit/subscription.test.ts` – Subscription type tests (26 tests) ✅
+- `src/__tests__/integration/lakehouse.test.ts` – Integration tests (17 pass, 2 skip) ✅
 
 ### npm Publication Ready
 
@@ -224,7 +226,7 @@ The 2 skipped tests are for prepared statement execution:
 - **Catalog commands (2026-02-09)** — Server was encoding tickets without `as_any()` wrapper,
   causing DoGet to fall through to SQL execution. Fixed in `lakehouse-flight/src/sql.rs`.
 
-### M7: Push Subscriptions (DoExchange Support)
+### M7: Push Subscriptions (DoExchange Support) ✅
 
 Enable real-time push subscriptions via Arrow Flight's `DoExchange` RPC.
 
@@ -235,14 +237,14 @@ subscribe to live data streams.
 
 **Implementation:**
 
-- [ ] `doExchange()` — bidirectional streaming RPC (client sends FlightData, server streams
+- [x] `doExchange()` — bidirectional streaming RPC (client sends FlightData, server streams
       FlightData)
-- [ ] Subscription protocol — encode subscribe/unsubscribe commands in FlightData `appMetadata`
-- [ ] `subscribe(query, options)` — high-level API returning `AsyncGenerator<RecordBatch>`
-- [ ] Heartbeat handling — process server heartbeats, detect stale connections
-- [ ] Reconnection — automatic resubscribe on connection loss with configurable backoff
-- [ ] Cancellation — clean unsubscribe on `AbortSignal` or explicit `unsubscribe()`
-- [ ] Metrics — `subscription_batches_received`, `subscription_reconnects`,
+- [x] Subscription protocol — encode subscribe/unsubscribe commands in FlightData `appMetadata`
+- [x] `subscribe(query, options)` — high-level API returning `AsyncGenerator<RecordBatch>`
+- [x] Heartbeat handling — process server heartbeats, detect stale connections
+- [x] Reconnection — automatic resubscribe on connection loss with configurable backoff
+- [x] Cancellation — clean unsubscribe on `AbortSignal` or explicit `unsubscribe()`
+- [x] Metrics — `subscription_batches_received`, `subscription_reconnects`,
       `subscription_latency_ms`
 
 **API Design:**
@@ -421,3 +423,4 @@ documents runtime-specific installation/usage notes.
 | 2026-02-04 | Integration test re-run confirmed lakehouse server issues. Schema parsing fails because `tryParseSchema()` uses `RecordBatchReader.from()` which expects a full IPC stream, but FlightInfo.schema is a single IPC message containing only schema. Need to use `MessageReader` to parse schema-only messages. Server-side issues: `FlightServiceServer` used instead of `FlightSqlServiceServer`, so catalog commands and prepared statements aren't dispatched to `FlightSqlService` trait methods.                                                                                          |
 | 2026-02-05 | Fixed schema parsing: `parseSchema()` now uses `MessageReader.readSchema()` for schema-only IPC messages. Fixed `stream()`: FlightData.dataHeader is raw flatbuffer without IPC framing; added continuation token (0xFFFFFFFF) + length prefix before parsing with `RecordBatchReader`. Integration tests now 12 pass, 7 skip (server-blocked). npm publish workflow added to release.yaml. Removed debug scripts.                                                                                                                                                                           |
 | 2026-02-09 | Investigated lakehouse server wiring. **Conclusion: Server is correct.** arrow-flight v57 has blanket `impl FlightService for T where T: FlightSqlService + Send` (server.rs lines 578-580 in arrow-flight source), so `FlightServiceServer::new(LakehouseFlightSqlService)` correctly dispatches Flight SQL commands to trait methods. `FlightSqlServiceServer` does NOT exist — earlier analysis was based on incorrect assumptions. The 7 skipped integration tests are likely client-side issues (protobuf encoding, handle format) not server-side. Next: add wire-level debug logging. |
+| 2026-02-09 | Implemented M7 (Push Subscriptions via DoExchange). DoExchange uses `ClientDuplexStream` for bidirectional streaming. Subscription class handles: (1) JSON-encoded subscribe/unsubscribe commands in `appMetadata`, (2) heartbeat processing, (3) automatic reconnection with exponential backoff + jitter, (4) AbortSignal cancellation. ExchangeStream interface provides low-level send/receive/cancel. Added 26 unit tests for subscription types and 5 integration tests. Total unit tests now 154.                                                                                     |

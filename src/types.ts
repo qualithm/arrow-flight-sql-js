@@ -413,3 +413,113 @@ export interface RetryOptions {
   /** Custom function to determine if error is retryable */
   isRetryable?: (error: unknown) => boolean
 }
+
+// ============================================================================
+// Subscription Types (DoExchange Support)
+// ============================================================================
+
+/**
+ * Subscription mode for real-time data streaming
+ */
+/* eslint-disable @typescript-eslint/naming-convention */
+export const SubscriptionMode = {
+  /** Receive all existing data plus new changes */
+  FULL: "FULL",
+  /** Receive only new changes after subscription starts */
+  CHANGES_ONLY: "CHANGES_ONLY",
+  /** Tail the end of a dataset and receive new appends */
+  TAIL: "TAIL"
+} as const
+/* eslint-enable @typescript-eslint/naming-convention */
+
+export type SubscriptionMode = (typeof SubscriptionMode)[keyof typeof SubscriptionMode]
+
+/**
+ * Options for subscribing to real-time data
+ */
+export interface SubscribeOptions {
+  /** Subscription mode (default: CHANGES_ONLY) */
+  mode?: SubscriptionMode
+
+  /** Server heartbeat interval in milliseconds (default: 30000) */
+  heartbeatMs?: number
+
+  /** AbortSignal for cancellation */
+  signal?: AbortSignal
+
+  /** Auto-reconnect on connection loss (default: true) */
+  autoReconnect?: boolean
+
+  /** Maximum reconnection attempts (default: 10) */
+  maxReconnectAttempts?: number
+
+  /** Initial reconnect delay in ms (default: 1000) */
+  reconnectDelayMs?: number
+
+  /** Maximum reconnect delay in ms (default: 30000) */
+  maxReconnectDelayMs?: number
+
+  /** Application-specific metadata to send with subscription */
+  metadata?: Record<string, string>
+}
+
+/**
+ * Message types for subscription protocol
+ */
+export const SubscriptionMessageType = {
+  SUBSCRIBE: "SUBSCRIBE",
+  UNSUBSCRIBE: "UNSUBSCRIBE",
+  HEARTBEAT: "HEARTBEAT",
+  DATA: "DATA",
+  COMPLETE: "COMPLETE",
+  ERROR: "ERROR"
+} as const
+
+export type SubscriptionMessageType =
+  (typeof SubscriptionMessageType)[keyof typeof SubscriptionMessageType]
+
+/**
+ * Metadata for subscription messages sent via FlightData.appMetadata
+ */
+export interface SubscriptionMetadata {
+  /** Type of message */
+  type: SubscriptionMessageType
+
+  /** Subscription ID (assigned by server) */
+  subscriptionId?: string
+
+  /** Query for SUBSCRIBE messages */
+  query?: string
+
+  /** Subscription mode for SUBSCRIBE messages */
+  mode?: SubscriptionMode
+
+  /** Error message for ERROR type */
+  error?: string
+
+  /** Timestamp */
+  timestamp?: number
+}
+
+/**
+ * Handle for an active subscription with control methods
+ */
+export interface SubscriptionHandle<T = RecordBatch> extends AsyncIterable<T> {
+  /** Unique ID for this subscription */
+  readonly id: string
+
+  /** Whether the subscription is currently connected */
+  readonly connected: boolean
+
+  /** Number of batches received */
+  readonly batchesReceived: number
+
+  /** Number of reconnection attempts */
+  readonly reconnectCount: number
+
+  /** Manually get the next batch */
+  next(): Promise<IteratorResult<T>>
+
+  /** Unsubscribe and close the connection */
+  unsubscribe(): Promise<void>
+}
