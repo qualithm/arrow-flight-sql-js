@@ -37,7 +37,7 @@ const retryableGrpcCodes = new Set([
  */
 export function isRetryableGrpcError(error: unknown): boolean {
   if (error instanceof Error && "code" in error) {
-    const code = (error as { code: number }).code
+    const {code} = (error as { code: number })
     return retryableGrpcCodes.has(code)
   }
   return false
@@ -95,14 +95,14 @@ export function calculateBackoffDelay(
 /**
  * Sleep for a specified duration
  */
-function sleep(ms: number): Promise<void> {
+async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
  * Result of a retry operation
  */
-export interface RetryResult<T> {
+export type RetryResult<T> = {
   /** The successful result value */
   value: T
   /** Number of attempts made (1 = succeeded on first try) */
@@ -202,7 +202,7 @@ export class RetryPolicy {
     fn: (...args: TArgs) => Promise<T>
   ): (...args: TArgs) => Promise<T> {
     return async (...args: TArgs): Promise<T> => {
-      const result = await this.execute(() => fn(...args))
+      const result = await this.execute(async () => fn(...args))
       return result.value
     }
   }

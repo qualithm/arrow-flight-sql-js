@@ -11,8 +11,7 @@
 
 import { FlightSqlClient } from "./client"
 import { TimeoutError } from "./errors"
-import type { RetryPolicy } from "./retry"
-import { retryPolicies } from "./retry"
+import { retryPolicies, type RetryPolicy } from "./retry"
 import type { FlightSqlClientOptions, PoolOptions, PoolStats } from "./types"
 
 // Default pool configuration
@@ -28,7 +27,7 @@ const defaultPoolOptions: Required<PoolOptions> = {
 /**
  * Internal state for a pooled connection
  */
-interface PooledConnection {
+type PooledConnection = {
   /** The Flight SQL client instance */
   client: FlightSqlClient
   /** Timestamp when connection was created */
@@ -46,7 +45,7 @@ interface PooledConnection {
 /**
  * Pending request waiting for a connection
  */
-interface PendingRequest {
+type PendingRequest = {
   resolve: (client: FlightSqlClient) => void
   reject: (error: Error) => void
   timeoutId: ReturnType<typeof setTimeout>
@@ -398,7 +397,7 @@ export class FlightSqlPool {
   /**
    * Wait for a connection to become available
    */
-  private waitForConnection(): Promise<FlightSqlClient> {
+  private async waitForConnection(): Promise<FlightSqlClient> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         const index = this.pendingRequests.findIndex((r) => r.timeoutId === timeoutId)

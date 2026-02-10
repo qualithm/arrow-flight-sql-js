@@ -27,30 +27,31 @@ import {
   getBytesField,
   parseProtoFields
 } from "./proto"
-import type {
-  Action,
-  ActionResult,
-  ActionType,
-  AuthConfig,
-  CatalogInfo,
-  DescriptorType,
-  ExecuteOptions,
-  FlightData,
-  FlightDescriptor,
-  FlightInfo,
-  FlightSqlClientOptions,
-  ForeignKeyInfo,
-  HandshakeResult,
-  PrimaryKeyInfo,
-  SchemaInfo,
-  SchemaResult,
-  SubscribeOptions,
-  SubscriptionMetadata,
-  TableInfo,
-  TableType,
-  Ticket
+import {
+  type Action,
+  type ActionResult,
+  type ActionType,
+  type AuthConfig,
+  type CatalogInfo,
+  type DescriptorType,
+  type ExecuteOptions,
+  type FlightData,
+  type FlightDescriptor,
+  type FlightInfo,
+  type FlightSqlClientOptions,
+  type ForeignKeyInfo,
+  type HandshakeResult,
+  type PrimaryKeyInfo,
+  type SchemaInfo,
+  type SchemaResult,
+  type SubscribeOptions,
+  SubscriptionMessageType,
+  type SubscriptionMetadata,
+  SubscriptionMode,
+  type TableInfo,
+  type TableType,
+  type Ticket
 } from "./types"
-import { SubscriptionMessageType, SubscriptionMode } from "./types"
 
 // Default configuration values
 const defaultConnectTimeoutMs = 30_000
@@ -126,7 +127,7 @@ export class FlightSqlClient {
 
       // Create channel credentials
       const credentials: grpc.ChannelCredentials =
-        this.options.credentials !== undefined ? this.options.credentials : this.createCredentials()
+        this.options.credentials ?? this.createCredentials()
 
       // Create the gRPC client
       const address = `${this.options.host}:${String(this.options.port)}`
@@ -352,7 +353,7 @@ export class FlightSqlClient {
 
     const flightInfo = await this.getFlightInfo(descriptor)
     return this.fetchCatalogResults<CatalogInfo>(flightInfo, (row) => ({
-      catalogName: row["catalog_name"] as string
+      catalogName: row.catalog_name as string
     }))
   }
 
@@ -386,8 +387,8 @@ export class FlightSqlClient {
 
     const flightInfo = await this.getFlightInfo(descriptor)
     return this.fetchCatalogResults<SchemaInfo>(flightInfo, (row) => ({
-      catalogName: row["catalog_name"] as string | undefined,
-      schemaName: row["db_schema_name"] as string
+      catalogName: row.catalog_name as string | undefined,
+      schemaName: row.db_schema_name as string
     }))
   }
 
@@ -436,14 +437,14 @@ export class FlightSqlClient {
     const flightInfo = await this.getFlightInfo(descriptor)
     return this.fetchCatalogResults<TableInfo>(flightInfo, (row) => {
       const info: TableInfo = {
-        catalogName: row["catalog_name"] as string | undefined,
-        schemaName: row["db_schema_name"] as string | undefined,
-        tableName: row["table_name"] as string,
-        tableType: row["table_type"] as string
+        catalogName: row.catalog_name as string | undefined,
+        schemaName: row.db_schema_name as string | undefined,
+        tableName: row.table_name as string,
+        tableType: row.table_type as string
       }
 
       // If includeSchema was requested, parse the table schema
-      const schemaBytes = row["table_schema"] as Uint8Array | undefined
+      const schemaBytes = row.table_schema as Uint8Array | undefined
       if (schemaBytes && schemaBytes.length > 0) {
         info.schema = tryParseSchema(schemaBytes) ?? undefined
       }
@@ -474,7 +475,7 @@ export class FlightSqlClient {
 
     const flightInfo = await this.getFlightInfo(descriptor)
     return this.fetchCatalogResults<TableType>(flightInfo, (row) => ({
-      tableType: row["table_type"] as string
+      tableType: row.table_type as string
     }))
   }
 
@@ -509,12 +510,12 @@ export class FlightSqlClient {
 
     const flightInfo = await this.getFlightInfo(descriptor)
     return this.fetchCatalogResults<PrimaryKeyInfo>(flightInfo, (row) => ({
-      catalogName: row["catalog_name"] as string | undefined,
-      schemaName: row["db_schema_name"] as string | undefined,
-      tableName: row["table_name"] as string,
-      columnName: row["column_name"] as string,
-      keySequence: row["key_sequence"] as number,
-      keyName: row["key_name"] as string | undefined
+      catalogName: row.catalog_name as string | undefined,
+      schemaName: row.db_schema_name as string | undefined,
+      tableName: row.table_name as string,
+      columnName: row.column_name as string,
+      keySequence: row.key_sequence as number,
+      keyName: row.key_name as string | undefined
     }))
   }
 
@@ -597,20 +598,15 @@ export class FlightSqlClient {
 
     for (const endpoint of flightInfo.endpoints) {
       for await (const flightData of this.doGet(endpoint.ticket)) {
-        if (flightData.dataHeader && flightData.dataBody) {
-          const batch = parseFlightData(flightData.dataHeader, flightData.dataBody, schema)
-          if (batch) {
-            // Convert batch rows to objects
-            for (let i = 0; i < batch.numRows; i++) {
-              const row: Record<string, unknown> = {}
-              for (const field of schema.fields) {
-                const column = batch.getChild(field.name)
-                row[field.name] = column?.get(i)
-              }
-              results.push(mapper(row))
-            }
-          }
+        if (!flightData.dataHeader || !flightData.dataBody) {
+          continue
         }
+        const batch = parseFlightData(flightData.dataHeader, flightData.dataBody, schema)
+        if (!batch) {
+          continue
+        }
+        // Convert batch rows to objects
+        this.extractRowsFromBatch(batch, schema, mapper, results)
       }
     }
 
@@ -618,23 +614,42 @@ export class FlightSqlClient {
   }
 
   /**
+   * Helper to extract rows from a batch and map them
+   */
+  private extractRowsFromBatch<T>(
+    batch: RecordBatch,
+    schema: Schema,
+    mapper: (row: Record<string, unknown>) => T,
+    results: T[]
+  ): void {
+    for (let i = 0; i < batch.numRows; i++) {
+      const row: Record<string, unknown> = {}
+      for (const field of schema.fields) {
+        const column = batch.getChild(field.name)
+        row[field.name] = column?.get(i)
+      }
+      results.push(mapper(row))
+    }
+  }
+
+  /**
    * Helper to fetch foreign key results with the complex schema
    */
   private async fetchForeignKeyResults(flightInfo: FlightInfo): Promise<ForeignKeyInfo[]> {
     return this.fetchCatalogResults<ForeignKeyInfo>(flightInfo, (row) => ({
-      pkCatalogName: row["pk_catalog_name"] as string | undefined,
-      pkSchemaName: row["pk_db_schema_name"] as string | undefined,
-      pkTableName: row["pk_table_name"] as string,
-      pkColumnName: row["pk_column_name"] as string,
-      fkCatalogName: row["fk_catalog_name"] as string | undefined,
-      fkSchemaName: row["fk_db_schema_name"] as string | undefined,
-      fkTableName: row["fk_table_name"] as string,
-      fkColumnName: row["fk_column_name"] as string,
-      keySequence: row["key_sequence"] as number,
-      fkKeyName: row["fk_key_name"] as string | undefined,
-      pkKeyName: row["pk_key_name"] as string | undefined,
-      updateRule: row["update_rule"] as number,
-      deleteRule: row["delete_rule"] as number
+      pkCatalogName: row.pk_catalog_name as string | undefined,
+      pkSchemaName: row.pk_db_schema_name as string | undefined,
+      pkTableName: row.pk_table_name as string,
+      pkColumnName: row.pk_column_name as string,
+      fkCatalogName: row.fk_catalog_name as string | undefined,
+      fkSchemaName: row.fk_db_schema_name as string | undefined,
+      fkTableName: row.fk_table_name as string,
+      fkColumnName: row.fk_column_name as string,
+      keySequence: row.key_sequence as number,
+      fkKeyName: row.fk_key_name as string | undefined,
+      pkKeyName: row.pk_key_name as string | undefined,
+      updateRule: row.update_rule as number,
+      deleteRule: row.delete_rule as number
     }))
   }
 
@@ -862,7 +877,7 @@ export class FlightSqlClient {
 
     // Create the exchange handle
     const exchange: ExchangeStream = {
-      send(data: FlightData): Promise<void> {
+      async send(data: FlightData): Promise<void> {
         if (errorState.error) {
           throw wrapGrpcError(errorState.error as grpc.ServiceError)
         }
@@ -877,7 +892,7 @@ export class FlightSqlClient {
         return Promise.resolve()
       },
 
-      end(): Promise<void> {
+      async end(): Promise<void> {
         stream.end()
         return Promise.resolve()
       },
@@ -966,7 +981,7 @@ export class FlightSqlClient {
   private async getFirstFromIterable<T>(iterable: AsyncIterable<T>): Promise<T | undefined> {
     const iterator = iterable[Symbol.asyncIterator]()
     const result = await iterator.next()
-    return result.done ? undefined : result.value
+    return result.done === true ? undefined : result.value
   }
 
   /**
@@ -1124,7 +1139,7 @@ export class FlightSqlClient {
     const metadata = new grpc.Metadata()
 
     // Add auth token if present
-    if (this.authToken) {
+    if (this.authToken !== null && this.authToken !== "") {
       metadata.set("authorization", `Bearer ${this.authToken}`)
     }
 
@@ -1163,7 +1178,20 @@ export class FlightSqlClient {
       case grpc.status.UNAVAILABLE:
       case grpc.status.DEADLINE_EXCEEDED:
         return new ConnectionError(message, { cause: error })
-      default:
+      case grpc.status.OK:
+      case grpc.status.CANCELLED:
+      case grpc.status.UNKNOWN:
+      case grpc.status.INVALID_ARGUMENT:
+      case grpc.status.NOT_FOUND:
+      case grpc.status.ALREADY_EXISTS:
+      case grpc.status.PERMISSION_DENIED:
+      case grpc.status.RESOURCE_EXHAUSTED:
+      case grpc.status.FAILED_PRECONDITION:
+      case grpc.status.ABORTED:
+      case grpc.status.OUT_OF_RANGE:
+      case grpc.status.UNIMPLEMENTED:
+      case grpc.status.INTERNAL:
+      case grpc.status.DATA_LOSS:
         return new FlightSqlError(message, { cause: error })
     }
   }
@@ -1204,12 +1232,12 @@ export class FlightSqlClient {
     const info = response as {
       schema?: Uint8Array
       flightDescriptor?: { type: number; cmd?: Uint8Array; path?: string[] }
-      endpoint?: Array<{
+      endpoint?: {
         ticket?: { ticket: Uint8Array }
-        location?: Array<{ uri: string }>
+        location?: { uri: string }[]
         expirationTime?: { seconds: string; nanos: number }
         appMetadata?: Uint8Array
-      }>
+      }[]
       totalRecords?: string
       totalBytes?: string
       ordered?: boolean
@@ -1326,7 +1354,7 @@ export class QueryResult {
         if (flightData.dataHeader && flightData.dataHeader.length > 0) {
           const framed = this.frameAsIPC(
             flightData.dataHeader,
-            flightData.dataBody || new Uint8Array(0)
+            flightData.dataBody ?? new Uint8Array(0)
           )
           framedParts.push(framed)
         }
@@ -1448,9 +1476,9 @@ export class QueryResult {
  */
 export class PreparedStatement {
   private readonly client: FlightSqlClient
-  private handle: Uint8Array
-  private datasetSchema: Schema | null
-  private parameterSchema: Schema | null
+  private readonly handle: Uint8Array
+  private readonly datasetSchema: Schema | null
+  private readonly parameterSchema: Schema | null
   private closed = false
 
   constructor(
@@ -1531,11 +1559,11 @@ export class PreparedStatement {
 }
 
 // Internal interface for accessing protected client methods
-interface FlightSqlClientInternal extends FlightSqlClient {
-  getFlightInfo(descriptor: FlightDescriptor): Promise<FlightInfo>
-  doAction(action: Action): AsyncGenerator<ActionResult, void, unknown>
-  doExchange(descriptor: FlightDescriptor): ExchangeStream
-}
+type FlightSqlClientInternal = {
+  getFlightInfo: (descriptor: FlightDescriptor) => Promise<FlightInfo>
+  doAction: (action: Action) => AsyncGenerator<ActionResult, void, unknown>
+  doExchange: (descriptor: FlightDescriptor) => ExchangeStream
+} & FlightSqlClient
 
 // ============================================================================
 // ExchangeStream
@@ -1546,22 +1574,22 @@ interface FlightSqlClientInternal extends FlightSqlClient {
  *
  * Allows sending and receiving FlightData messages over a single connection.
  */
-export interface ExchangeStream extends AsyncIterable<FlightData> {
+export type ExchangeStream = {
   /**
    * Send a FlightData message to the server
    */
-  send(data: FlightData): Promise<void>
+  send: (data: FlightData) => Promise<void>
 
   /**
    * Signal the end of client-side writes (half-close)
    */
-  end(): Promise<void>
+  end: () => Promise<void>
 
   /**
    * Cancel the stream immediately
    */
-  cancel(): void
-}
+  cancel: () => void
+} & AsyncIterable<FlightData>
 
 // ============================================================================
 // Subscription
@@ -1752,13 +1780,14 @@ export class Subscription implements AsyncIterable<RecordBatch> {
 
           case SubscriptionMessageType.DATA:
             // Continue to parse data
-            if (metadata.subscriptionId && !this.subscriptionId) {
+            if (metadata.subscriptionId !== undefined && this.subscriptionId === null) {
               this.subscriptionId = metadata.subscriptionId
             }
             break
 
-          default:
-            // Unknown message type, continue
+          case SubscriptionMessageType.SUBSCRIBE:
+          case SubscriptionMessageType.UNSUBSCRIBE:
+            // These are client-to-server messages, ignore if received
             break
         }
       }
@@ -1904,7 +1933,7 @@ export class Subscription implements AsyncIterable<RecordBatch> {
     return result
   }
 
-  private sleep(ms: number): Promise<void> {
+  private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
 }

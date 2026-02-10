@@ -78,7 +78,7 @@ export async function withTestClient<T>(
 export function skipIfNoIntegration(): boolean {
   const config = getTestConfig()
   if (config.skipIntegration) {
-    console.log("Skipping integration test (SKIP_INTEGRATION_TESTS=true)")
+    console.warn("Skipping integration test (SKIP_INTEGRATION_TESTS=true)")
     return true
   }
   return false

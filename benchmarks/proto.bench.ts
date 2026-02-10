@@ -68,70 +68,70 @@ const longQuery = `
 export const protoBenchmarks: Benchmark[] = [
   {
     name: "encodeCommandStatementQuery (simple)",
-    fn: () => {
+    fn: (): void => {
       encodeCommandStatementQuery(simpleQuery)
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandStatementQuery (complex)",
-    fn: () => {
+    fn: (): void => {
       encodeCommandStatementQuery(complexQuery)
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandStatementQuery (long)",
-    fn: () => {
+    fn: (): void => {
       encodeCommandStatementQuery(longQuery)
     },
     iterations: 50_000
   },
   {
     name: "encodeCommandStatementQuery with txn",
-    fn: () => {
+    fn: (): void => {
       encodeCommandStatementQuery(simpleQuery, new Uint8Array([1, 2, 3, 4]))
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandStatementUpdate",
-    fn: () => {
+    fn: (): void => {
       encodeCommandStatementUpdate("UPDATE users SET status = 'inactive' WHERE id = 123")
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandGetCatalogs",
-    fn: () => {
+    fn: (): void => {
       encodeCommandGetCatalogs()
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandGetDbSchemas",
-    fn: () => {
+    fn: (): void => {
       encodeCommandGetDbSchemas()
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandGetDbSchemas (filtered)",
-    fn: () => {
+    fn: (): void => {
       encodeCommandGetDbSchemas("catalog", "public%")
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandGetTables",
-    fn: () => {
+    fn: (): void => {
       encodeCommandGetTables({})
     },
     iterations: 100_000
   },
   {
     name: "encodeCommandGetTables (all filters)",
-    fn: () => {
+    fn: (): void => {
       encodeCommandGetTables({
         catalog: "catalog",
         dbSchemaFilterPattern: "public",

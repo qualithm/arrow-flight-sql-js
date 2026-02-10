@@ -54,7 +54,7 @@ export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL" | "CROSS"
 export type LogicalOperator = "AND" | "OR"
 
 /** A single WHERE condition */
-export interface WhereCondition {
+export type WhereCondition = {
   column: string
   operator: ComparisonOperator
   value: SqlValue
@@ -62,7 +62,7 @@ export interface WhereCondition {
 }
 
 /** A raw SQL expression */
-export interface RawExpression {
+export type RawExpression = {
   __raw: true
   sql: string
 }
@@ -74,14 +74,14 @@ export type SqlValue = string | number | boolean | bigint | null | Date | RawExp
 export type ColumnSpec = string | { column: string; alias: string }
 
 /** Order by specification */
-export interface OrderSpec {
+export type OrderSpec = {
   column: string
   direction: SortDirection
   nulls?: "FIRST" | "LAST"
 }
 
 /** Join specification */
-export interface JoinSpec {
+export type JoinSpec = {
   type: JoinType
   table: string
   alias?: string
@@ -89,7 +89,7 @@ export interface JoinSpec {
 }
 
 /** Result of building a query */
-export interface BuiltQuery {
+export type BuiltQuery = {
   /** The SQL query string */
   sql: string
   /** Parameter values for prepared statements (if using parameterized mode) */
@@ -271,7 +271,7 @@ export class QueryBuilder {
   private _insertValues: SqlValue[][] = []
 
   // For UPDATE
-  private _setValues: Map<string, SqlValue> = new Map()
+  private _setValues = new Map<string, SqlValue>()
 
   // ============================================================================
   // SELECT Operations
@@ -695,10 +695,10 @@ export class QueryBuilder {
     parts.push(columns)
 
     // FROM
-    if (this._table) {
+    if (this._table !== "") {
       parts.push("FROM")
       let tableRef = escapeIdentifier(this._table)
-      if (this._tableAlias) {
+      if (this._tableAlias !== undefined && this._tableAlias !== "") {
         tableRef += ` AS ${escapeIdentifier(this._tableAlias)}`
       }
       parts.push(tableRef)
@@ -707,7 +707,7 @@ export class QueryBuilder {
     // JOINs
     for (const join of this._joins) {
       let joinClause = `${join.type} JOIN ${escapeIdentifier(join.table)}`
-      if (join.alias) {
+      if (join.alias !== undefined && join.alias !== "") {
         joinClause += ` AS ${escapeIdentifier(join.alias)}`
       }
       if (join.type !== "CROSS") {

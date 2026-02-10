@@ -164,7 +164,7 @@ describe("Lakehouse Integration", () => {
       }
 
       const result = await client.query("SELECT 1 as int_col, 'hello' as str_col")
-      const schema = result.schema
+      const {schema} = result
 
       expect(schema).toBeDefined()
       if (schema) {

@@ -59,7 +59,7 @@ export type OperationStatus = "success" | "error" | "timeout" | "cancelled"
 /**
  * Metric event emitted when an operation completes
  */
-export interface MetricEvent {
+export type MetricEvent = {
   /** Type of operation */
   operation: OperationType
 
@@ -85,7 +85,7 @@ export interface MetricEvent {
 /**
  * Gauge metric for current values (like pool size)
  */
-export interface GaugeEvent {
+export type GaugeEvent = {
   /** Name of the gauge */
   name: string
 
@@ -99,7 +99,7 @@ export interface GaugeEvent {
 /**
  * Counter metric for incrementing values
  */
-export interface CounterEvent {
+export type CounterEvent = {
   /** Name of the counter */
   name: string
 
@@ -119,26 +119,26 @@ export interface CounterEvent {
  *
  * Implement this interface to integrate with your observability backend.
  */
-export interface MetricsHandler {
+export type MetricsHandler = {
   /**
    * Record a timed operation metric
    */
-  recordOperation(event: MetricEvent): void
+  recordOperation: (event: MetricEvent) => void
 
   /**
    * Record a gauge value
    */
-  recordGauge(event: GaugeEvent): void
+  recordGauge: (event: GaugeEvent) => void
 
   /**
    * Record a counter increment
    */
-  recordCounter(event: CounterEvent): void
+  recordCounter: (event: CounterEvent) => void
 
   /**
    * Called when the client is closed, allowing cleanup
    */
-  close?(): void | Promise<void>
+  close?: () => void | Promise<void>
 }
 
 // ============================================================================
@@ -179,7 +179,7 @@ export class ConsoleMetricsHandler implements MetricsHandler {
     const message = `${this.prefix} ${statusEmoji} ${event.operation} ${event.status} (${String(event.durationMs)}ms)`
 
     if (event.status === "success") {
-      console.log(message)
+      console.warn(message)
     } else {
       console.error(message, event.error?.message ?? "")
     }
@@ -187,12 +187,12 @@ export class ConsoleMetricsHandler implements MetricsHandler {
 
   recordGauge(event: GaugeEvent): void {
     const labels = event.labels ? ` ${JSON.stringify(event.labels)}` : ""
-    console.log(`${this.prefix} [gauge] ${event.name}=${String(event.value)}${labels}`)
+    console.warn(`${this.prefix} [gauge] ${event.name}=${String(event.value)}${labels}`)
   }
 
   recordCounter(event: CounterEvent): void {
     const labels = event.labels ? ` ${JSON.stringify(event.labels)}` : ""
-    console.log(`${this.prefix} [counter] ${event.name}+=${String(event.increment)}${labels}`)
+    console.warn(`${this.prefix} [counter] ${event.name}+=${String(event.increment)}${labels}`)
   }
 }
 
@@ -202,8 +202,8 @@ export class ConsoleMetricsHandler implements MetricsHandler {
  */
 export class InMemoryMetricsHandler implements MetricsHandler {
   private readonly operations: MetricEvent[] = []
-  private readonly gauges: Map<string, GaugeEvent> = new Map()
-  private readonly counters: Map<string, number> = new Map()
+  private readonly gauges = new Map<string, GaugeEvent>()
+  private readonly counters = new Map<string, number>()
   private readonly maxOperations: number
 
   constructor(options?: { maxOperations?: number }) {

@@ -141,7 +141,7 @@ describe("calculateBackoffDelay", () => {
 describe("withRetry", () => {
   test("should return result on first success", async () => {
     let attempts = 0
-    const result = await withRetry(() => {
+    const result = await withRetry(async () => {
       attempts++
       return Promise.resolve("success")
     })
@@ -154,7 +154,7 @@ describe("withRetry", () => {
   test("should retry on transient failure", async () => {
     let attempts = 0
     const result = await withRetry(
-      () => {
+      async () => {
         attempts++
         if (attempts < 3) {
           return Promise.reject(Object.assign(new Error("Unavailable"), { code: 14 }))
@@ -174,7 +174,7 @@ describe("withRetry", () => {
     let caughtError: Error | undefined
     try {
       await withRetry(
-        (): Promise<unknown> => {
+        async (): Promise<unknown> => {
           attempts++
           return Promise.reject(Object.assign(new Error("Unavailable"), { code: 14 }))
         },
@@ -194,7 +194,7 @@ describe("withRetry", () => {
     let caughtError: Error | undefined
     try {
       await withRetry(
-        (): Promise<unknown> => {
+        async (): Promise<unknown> => {
           attempts++
           return Promise.reject(new Error("Non-retryable error"))
         },
@@ -211,7 +211,7 @@ describe("withRetry", () => {
   test("should use custom isRetryable function", async () => {
     let attempts = 0
     const result = await withRetry(
-      () => {
+      async () => {
         attempts++
         if (attempts < 2) {
           return Promise.reject(new Error("Custom retryable"))
@@ -246,7 +246,7 @@ describe("RetryPolicy", () => {
   test("should execute operation with policy", async () => {
     const policy = new RetryPolicy({ maxRetries: 2, initialDelayMs: 1 })
 
-    const result = await policy.execute(() => Promise.resolve("success"))
+    const result = await policy.execute(async () => Promise.resolve("success"))
 
     expect(result.value).toBe("success")
     expect(result.attempts).toBe(1)
@@ -256,7 +256,7 @@ describe("RetryPolicy", () => {
     const policy = new RetryPolicy({ maxRetries: 2, initialDelayMs: 1 })
 
     let calls = 0
-    const wrapped = policy.wrap((x: number) => {
+    const wrapped = policy.wrap(async (x: number) => {
       calls++
       if (calls === 1) {
         return Promise.reject(Object.assign(new Error("Retry"), { code: 14 }))
@@ -299,7 +299,7 @@ describe("retryPolicies", () => {
     let attempts = 0
     let threw = false
     try {
-      await retryPolicies.none.execute((): Promise<unknown> => {
+      await retryPolicies.none.execute(async (): Promise<unknown> => {
         attempts++
         return Promise.reject(Object.assign(new Error("Fail"), { code: 14 }))
       })

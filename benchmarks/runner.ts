@@ -6,7 +6,7 @@ import { protoBenchmarks } from "./proto.bench"
 import { queryBuilderBenchmarks } from "./query-builder.bench"
 import { retryBenchmarks } from "./retry.bench"
 
-export interface BenchmarkResult {
+export type BenchmarkResult = {
   name: string
   iterations: number
   totalMs: number
@@ -16,7 +16,7 @@ export interface BenchmarkResult {
   maxNsPerOp: number
 }
 
-export interface Benchmark {
+export type Benchmark = {
   name: string
   fn: () => void
   iterations?: number
@@ -110,13 +110,13 @@ function formatDuration(ns: number): string {
  * Run a group of benchmarks
  */
 export function runBenchmarkGroup(name: string, benchmarks: Benchmark[]): void {
-  console.log(`\n${"=".repeat(80)}`)
-  console.log(`  ${name}`)
-  console.log("=".repeat(80))
+  console.warn(`\n${"=".repeat(80)}`)
+  console.warn(`  ${name}`)
+  console.warn("=".repeat(80))
 
   for (const benchmark of benchmarks) {
     const result = runBenchmark(benchmark)
-    console.log(formatResult(result))
+    console.warn(formatResult(result))
   }
 }
 
@@ -124,14 +124,14 @@ export function runBenchmarkGroup(name: string, benchmarks: Benchmark[]): void {
  * Run all benchmark suites
  */
 export function runAllBenchmarks(): void {
-  console.log("\n🚀 Arrow Flight SQL JS Benchmarks")
-  console.log("=".repeat(80))
+  console.warn("\n🚀 Arrow Flight SQL JS Benchmarks")
+  console.warn("=".repeat(80))
 
   runBenchmarkGroup("Protocol Buffer Encoding", protoBenchmarks)
   runBenchmarkGroup("Query Builder", queryBuilderBenchmarks)
   runBenchmarkGroup("Retry Logic", retryBenchmarks)
 
-  console.log("\n" + "=".repeat(80))
-  console.log("  Benchmarks complete")
-  console.log("=".repeat(80) + "\n")
+  console.warn(`\n${"=".repeat(80)}`)
+  console.warn("  Benchmarks complete")
+  console.warn(`${"=".repeat(80)}\n`)
 }

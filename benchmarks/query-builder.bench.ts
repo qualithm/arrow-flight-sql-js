@@ -19,56 +19,56 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // Value formatting
   {
     name: "escapeIdentifier (simple)",
-    fn: () => {
+    fn: (): void => {
       escapeIdentifier("users")
     },
     iterations: 500_000
   },
   {
     name: "escapeIdentifier (qualified)",
-    fn: () => {
+    fn: (): void => {
       escapeIdentifier("catalog.schema.table")
     },
     iterations: 500_000
   },
   {
     name: "escapeString (simple)",
-    fn: () => {
+    fn: (): void => {
       escapeString("hello world")
     },
     iterations: 500_000
   },
   {
     name: "escapeString (with quotes)",
-    fn: () => {
+    fn: (): void => {
       escapeString("it's a test's value")
     },
     iterations: 500_000
   },
   {
     name: "formatValue (string)",
-    fn: () => {
+    fn: (): void => {
       formatValue("hello world")
     },
     iterations: 500_000
   },
   {
     name: "formatValue (number)",
-    fn: () => {
+    fn: (): void => {
       formatValue(3.14159)
     },
     iterations: 500_000
   },
   {
     name: "formatValue (Date)",
-    fn: () => {
+    fn: (): void => {
       formatValue(new Date("2024-01-15T10:30:00.000Z"))
     },
     iterations: 100_000
   },
   {
     name: "formatValue (array)",
-    fn: () => {
+    fn: (): void => {
       formatValue([1, 2, 3, 4, 5])
     },
     iterations: 200_000
@@ -77,21 +77,21 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // Simple SELECT queries
   {
     name: "SELECT * FROM table",
-    fn: () => {
+    fn: (): void => {
       new QueryBuilder().from("users").build()
     },
     iterations: 100_000
   },
   {
     name: "SELECT with columns",
-    fn: () => {
+    fn: (): void => {
       select("id", "name", "email").from("users").build()
     },
     iterations: 100_000
   },
   {
     name: "SELECT with WHERE",
-    fn: () => {
+    fn: (): void => {
       select("*").from("users").where("status", "=", "active").build()
     },
     iterations: 100_000
@@ -100,7 +100,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // Complex SELECT queries
   {
     name: "SELECT complex (5 conditions)",
-    fn: () => {
+    fn: (): void => {
       select("id", "name", "email", "status", "role")
         .from("users")
         .where("status", "=", "active")
@@ -117,7 +117,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   },
   {
     name: "SELECT with JOIN",
-    fn: () => {
+    fn: (): void => {
       select("u.id", "u.name", "o.total")
         .from("users", "u")
         .innerJoin("orders", "o.user_id = u.id", "o")
@@ -130,7 +130,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   },
   {
     name: "SELECT with multiple JOINs",
-    fn: () => {
+    fn: (): void => {
       select("u.name", "p.title", "c.name")
         .from("users", "u")
         .innerJoin("posts", "p.author_id = u.id", "p")
@@ -148,7 +148,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // INSERT queries
   {
     name: "INSERT single row",
-    fn: () => {
+    fn: (): void => {
       insertInto("users")
         .columns("name", "email", "status")
         .values("Alice", "alice@example.com", "active")
@@ -158,7 +158,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   },
   {
     name: "INSERT multiple rows (5)",
-    fn: () => {
+    fn: (): void => {
       insertInto("users")
         .columns("name", "email", "status")
         .values("Alice", "alice@example.com", "active")
@@ -174,14 +174,14 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // UPDATE queries
   {
     name: "UPDATE simple",
-    fn: () => {
+    fn: (): void => {
       update("users").set("status", "inactive").where("id", "=", 123).build()
     },
     iterations: 100_000
   },
   {
     name: "UPDATE with setMany",
-    fn: () => {
+    fn: (): void => {
       update("users")
         .set("status", "inactive")
         .set("updated_at", raw("NOW()"))
@@ -196,7 +196,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // DELETE queries
   {
     name: "DELETE simple",
-    fn: () => {
+    fn: (): void => {
       deleteFrom("sessions").where("expired_at", "<", raw("NOW()")).build()
     },
     iterations: 100_000
@@ -205,7 +205,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // Parameterized queries
   {
     name: "SELECT parameterized",
-    fn: () => {
+    fn: (): void => {
       select("*")
         .from("users")
         .where("status", "=", "active")
@@ -218,7 +218,7 @@ export const queryBuilderBenchmarks: Benchmark[] = [
   // Clone and reuse
   {
     name: "clone and extend",
-    fn: () => {
+    fn: (): void => {
       const base = select("*").from("users").where("status", "=", "active")
       const extended = base.clone().where("role", "=", "admin").limit(10)
       extended.build()

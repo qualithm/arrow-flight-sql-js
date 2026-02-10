@@ -20,35 +20,35 @@ export const retryBenchmarks: Benchmark[] = [
   // Error classification
   {
     name: "isRetryableGrpcError (retryable)",
-    fn: () => {
+    fn: (): void => {
       isRetryableGrpcError(retryableError)
     },
     iterations: 500_000
   },
   {
     name: "isRetryableGrpcError (non-retryable)",
-    fn: () => {
+    fn: (): void => {
       isRetryableGrpcError(nonRetryableError)
     },
     iterations: 500_000
   },
   {
     name: "isRetryableGrpcError (generic)",
-    fn: () => {
+    fn: (): void => {
       isRetryableGrpcError(genericError)
     },
     iterations: 500_000
   },
   {
     name: "defaultIsRetryable (retryable)",
-    fn: () => {
+    fn: (): void => {
       defaultIsRetryable(retryableError)
     },
     iterations: 500_000
   },
   {
     name: "defaultIsRetryable (non-retryable)",
-    fn: () => {
+    fn: (): void => {
       defaultIsRetryable(nonRetryableError)
     },
     iterations: 500_000
@@ -57,7 +57,7 @@ export const retryBenchmarks: Benchmark[] = [
   // Backoff calculation
   {
     name: "calculateBackoffDelay (attempt 1)",
-    fn: () => {
+    fn: (): void => {
       calculateBackoffDelay(1, {
         maxRetries: 5,
         initialDelayMs: 100,
@@ -70,7 +70,7 @@ export const retryBenchmarks: Benchmark[] = [
   },
   {
     name: "calculateBackoffDelay (attempt 5)",
-    fn: () => {
+    fn: (): void => {
       calculateBackoffDelay(5, {
         maxRetries: 5,
         initialDelayMs: 100,
@@ -83,7 +83,7 @@ export const retryBenchmarks: Benchmark[] = [
   },
   {
     name: "calculateBackoffDelay (attempt 10)",
-    fn: () => {
+    fn: (): void => {
       calculateBackoffDelay(10, {
         maxRetries: 5,
         initialDelayMs: 100,
@@ -98,14 +98,14 @@ export const retryBenchmarks: Benchmark[] = [
   // RetryPolicy creation
   {
     name: "RetryPolicy.create (default)",
-    fn: () => {
+    fn: (): void => {
       new RetryPolicy({})
     },
     iterations: 100_000
   },
   {
     name: "RetryPolicy.create (custom)",
-    fn: () => {
+    fn: (): void => {
       new RetryPolicy({
         maxRetries: 5,
         initialDelayMs: 200,
@@ -117,14 +117,14 @@ export const retryBenchmarks: Benchmark[] = [
   },
   {
     name: "retryPolicies.default access",
-    fn: () => {
+    fn: (): void => {
       void retryPolicies.default
     },
     iterations: 500_000
   },
   {
     name: "retryPolicies.aggressive access",
-    fn: () => {
+    fn: (): void => {
       void retryPolicies.aggressive
     },
     iterations: 500_000
@@ -133,28 +133,28 @@ export const retryBenchmarks: Benchmark[] = [
   // RetryPolicy methods
   {
     name: "RetryPolicy.wouldRetry (yes)",
-    fn: () => {
+    fn: (): void => {
       retryPolicies.default.wouldRetry(retryableError)
     },
     iterations: 200_000
   },
   {
     name: "RetryPolicy.wouldRetry (no)",
-    fn: () => {
+    fn: (): void => {
       retryPolicies.default.wouldRetry(nonRetryableError)
     },
     iterations: 200_000
   },
   {
     name: "RetryPolicy.getDelayForAttempt (1)",
-    fn: () => {
+    fn: (): void => {
       retryPolicies.default.getDelayForAttempt(1)
     },
     iterations: 500_000
   },
   {
     name: "RetryPolicy.getDelayForAttempt (5)",
-    fn: () => {
+    fn: (): void => {
       retryPolicies.default.getDelayForAttempt(5)
     },
     iterations: 500_000

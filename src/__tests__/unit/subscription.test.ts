@@ -4,8 +4,7 @@
 
 import { describe, expect, test } from "bun:test"
 
-import type { SubscriptionMetadata } from "../../types"
-import { SubscriptionMessageType, SubscriptionMode } from "../../types"
+import { SubscriptionMessageType, type SubscriptionMetadata, SubscriptionMode } from "../../types"
 
 describe("SubscriptionMode", () => {
   test("should have Full mode", () => {
@@ -202,7 +201,7 @@ describe("Subscription command encoding", () => {
   })
 
   test("should include optional metadata", () => {
-    interface ExtendedMetadata {
+    type ExtendedMetadata = {
       type: string
       query: string
       mode: string

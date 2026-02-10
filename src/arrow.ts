@@ -151,7 +151,7 @@ function serializeSchemaMessage(schema: Schema): Uint8Array {
   // Read the first message (schema)
   const reader = new MessageReader(ipcBytes)
   const msg = reader.readMessage()
-  if (msg && msg.headerType === MessageHeader.Schema) {
+  if (msg?.headerType === MessageHeader.Schema) {
     // Return the schema portion
     // The reader consumes: continuation(4) + length(4) + header + padding
     const metadataLength = new DataView(ipcBytes.buffer, 4, 4).getInt32(0, true)

@@ -2,8 +2,7 @@
  * Unit tests for metrics and observability module
  */
 
-import type { Mock } from "bun:test"
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from "bun:test"
 
 import {
   ConsoleMetricsHandler,
@@ -386,10 +385,10 @@ describe("InMemoryMetricsHandler", () => {
     expect(summary.totalOperations).toBe(3)
     expect(summary.successCount).toBe(2)
     expect(summary.errorCount).toBe(1)
-    expect(summary.operationCounts["query"]).toBe(2)
-    expect(summary.operationCounts["execute"]).toBe(1)
-    expect(summary.averageDurations["query"]).toBe(75) // (100 + 50) / 2
-    expect(summary.averageDurations["execute"]).toBe(200)
+    expect(summary.operationCounts.query).toBe(2)
+    expect(summary.operationCounts.execute).toBe(1)
+    expect(summary.averageDurations.query).toBe(75) // (100 + 50) / 2
+    expect(summary.averageDurations.execute).toBe(200)
   })
 
   test("should clear all metrics", () => {
@@ -532,7 +531,7 @@ describe("withMetrics", () => {
   test("should record success for resolved promise", async () => {
     const handler = new InMemoryMetricsHandler()
 
-    const result = await withMetrics(handler, "query", () => {
+    const result = await withMetrics(handler, "query", async () => {
       return Promise.resolve(42)
     })
 
@@ -550,7 +549,7 @@ describe("withMetrics", () => {
 
     let caughtError: unknown
     try {
-      await withMetrics(handler, "query", (): Promise<unknown> => {
+      await withMetrics(handler, "query", async (): Promise<unknown> => {
         return Promise.reject(error)
       })
     } catch (e) {
@@ -571,7 +570,7 @@ describe("withMetrics", () => {
 
     let threw = false
     try {
-      await withMetrics(handler, "query", (): Promise<unknown> => {
+      await withMetrics(handler, "query", async (): Promise<unknown> => {
         return Promise.reject(timeoutError)
       })
     } catch {
@@ -590,7 +589,7 @@ describe("withMetrics", () => {
 
     let threw = false
     try {
-      await withMetrics(handler, "query", (): Promise<unknown> => {
+      await withMetrics(handler, "query", async (): Promise<unknown> => {
         return Promise.reject(cancelledError)
       })
     } catch {
@@ -607,10 +606,13 @@ describe("withMetrics", () => {
 
     let threw = false
     try {
-      await withMetrics(handler, "query", (): Promise<unknown> => {
-        // Use throw to bypass Promise.reject type checking
-        // This simulates code that throws a non-Error value
-        throw "string error" as unknown
+      await withMetrics(handler, "query", async () => {
+        // Need an await to satisfy require-await rule
+        await Promise.resolve()
+        // Use a helper to throw non-Error value to test the else branch
+        // in withMetrics error handling
+        const nonError = "string error" as unknown as Error
+        throw nonError
       })
     } catch {
       threw = true
@@ -628,7 +630,7 @@ describe("withMetrics", () => {
     await withMetrics(
       handler,
       "query",
-      () => {
+      async () => {
         return Promise.resolve("result")
       },
       { table: "users", limit: 100 }

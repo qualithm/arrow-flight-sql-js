@@ -312,7 +312,7 @@ export function encodeCommandGetTables(options: {
     }
   }
 
-  if (options.includeSchema) {
+  if (options.includeSchema === true) {
     // Boolean true encoded as varint 1
     parts.push(concat(encodeTag(5, wireType.varint), encodeVarint(1)))
   }
@@ -425,7 +425,7 @@ export function encodeCommandGetImportedKeys(
 /**
  * Simple protobuf field reader for decoding responses
  */
-export interface ProtoField {
+export type ProtoField = {
   fieldNumber: number
   wireType: number
   value: Uint8Array | number | bigint

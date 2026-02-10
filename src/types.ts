@@ -16,7 +16,7 @@ import type { RecordBatch, Schema, Table } from "apache-arrow"
 /**
  * Configuration options for creating a FlightSqlClient
  */
-export interface FlightSqlClientOptions {
+export type FlightSqlClientOptions = {
   /** Host address of the Flight SQL server */
   host: string
 
@@ -57,7 +57,7 @@ export type AuthConfig =
 /**
  * Result of a handshake operation
  */
-export interface HandshakeResult {
+export type HandshakeResult = {
   /** Protocol version negotiated with server */
   protocolVersion: bigint
 
@@ -81,7 +81,7 @@ export type DescriptorType = (typeof DescriptorType)[keyof typeof DescriptorType
 /**
  * The name or tag for a Flight. Used to retrieve or generate a flight.
  */
-export interface FlightDescriptor {
+export type FlightDescriptor = {
   type: DescriptorType
 
   /** Opaque command value (when type = CMD) */
@@ -94,21 +94,21 @@ export interface FlightDescriptor {
 /**
  * An opaque identifier for retrieving a portion of a stream
  */
-export interface Ticket {
+export type Ticket = {
   ticket: Uint8Array
 }
 
 /**
  * A location where a Flight service accepts retrieval requests
  */
-export interface Location {
+export type Location = {
   uri: string
 }
 
 /**
  * A particular stream or split associated with a flight
  */
-export interface FlightEndpoint {
+export type FlightEndpoint = {
   /** Token used to retrieve this stream */
   ticket: Ticket
 
@@ -125,7 +125,7 @@ export interface FlightEndpoint {
 /**
  * Access coordinates for retrieval of a dataset
  */
-export interface FlightInfo {
+export type FlightInfo = {
   /** Arrow schema in IPC format */
   schema: Uint8Array
 
@@ -151,7 +151,7 @@ export interface FlightInfo {
 /**
  * Schema result from GetSchema call
  */
-export interface SchemaResult {
+export type SchemaResult = {
   /** Arrow schema in IPC format */
   schema: Uint8Array
 }
@@ -159,7 +159,7 @@ export interface SchemaResult {
 /**
  * A batch of Arrow data as part of a stream
  */
-export interface FlightData {
+export type FlightData = {
   /** Descriptor of the data (for DoPut streams) */
   flightDescriptor?: FlightDescriptor
 
@@ -176,14 +176,14 @@ export interface FlightData {
 /**
  * Response from DoPut submission
  */
-export interface PutResult {
+export type PutResult = {
   appMetadata?: Uint8Array
 }
 
 /**
  * An action to execute on the Flight service
  */
-export interface Action {
+export type Action = {
   type: string
   body?: Uint8Array
 }
@@ -191,14 +191,14 @@ export interface Action {
 /**
  * Result from executing an action
  */
-export interface ActionResult {
+export type ActionResult = {
   body: Uint8Array
 }
 
 /**
  * Describes an available action type
  */
-export interface ActionType {
+export type ActionType = {
   type: string
   description: string
 }
@@ -210,7 +210,7 @@ export interface ActionType {
 /**
  * Options for executing SQL statements
  */
-export interface ExecuteOptions {
+export type ExecuteOptions = {
   /** Query timeout in seconds */
   timeoutSeconds?: number
 
@@ -221,7 +221,7 @@ export interface ExecuteOptions {
 /**
  * Options for prepared statements
  */
-export interface PreparedStatementOptions {
+export type PreparedStatementOptions = {
   /** Transaction ID for transactional operations */
   transactionId?: Uint8Array
 }
@@ -229,7 +229,7 @@ export interface PreparedStatementOptions {
 /**
  * Result from creating a prepared statement
  */
-export interface PreparedStatementResult {
+export type PreparedStatementResult = {
   /** Opaque handle for the prepared statement */
   handle: Uint8Array
 
@@ -243,7 +243,7 @@ export interface PreparedStatementResult {
 /**
  * Update result from DML statements
  */
-export interface UpdateResult {
+export type UpdateResult = {
   /** Number of rows affected */
   recordCount: bigint
 }
@@ -251,14 +251,14 @@ export interface UpdateResult {
 /**
  * Catalog information
  */
-export interface CatalogInfo {
+export type CatalogInfo = {
   catalogName: string
 }
 
 /**
  * Schema information within a catalog
  */
-export interface SchemaInfo {
+export type SchemaInfo = {
   catalogName?: string
   schemaName: string
 }
@@ -266,7 +266,7 @@ export interface SchemaInfo {
 /**
  * Table information
  */
-export interface TableInfo {
+export type TableInfo = {
   catalogName?: string
   schemaName?: string
   tableName: string
@@ -277,14 +277,14 @@ export interface TableInfo {
 /**
  * Table type names (e.g., "TABLE", "VIEW", "SYSTEM TABLE")
  */
-export interface TableType {
+export type TableType = {
   tableType: string
 }
 
 /**
  * Primary key information
  */
-export interface PrimaryKeyInfo {
+export type PrimaryKeyInfo = {
   catalogName?: string
   schemaName?: string
   tableName: string
@@ -296,7 +296,7 @@ export interface PrimaryKeyInfo {
 /**
  * Foreign key information
  */
-export interface ForeignKeyInfo {
+export type ForeignKeyInfo = {
   pkCatalogName?: string
   pkSchemaName?: string
   pkTableName: string
@@ -324,7 +324,7 @@ export type RecordBatchStream = AsyncIterable<RecordBatch>
 /**
  * Result from a query execution
  */
-export interface QueryResult {
+export type QueryResult = {
   /** Flight info containing endpoints for data retrieval */
   flightInfo: FlightInfo
 
@@ -334,13 +334,13 @@ export interface QueryResult {
   /**
    * Stream all record batches from all endpoints
    */
-  stream(): RecordBatchStream
+  stream: () => RecordBatchStream
 
   /**
    * Collect all data into a single Table
    * Warning: Loads entire result set into memory
    */
-  collect(): Promise<Table>
+  collect: () => Promise<Table>
 }
 
 // ============================================================================
@@ -350,7 +350,7 @@ export interface QueryResult {
 /**
  * Connection pool configuration
  */
-export interface PoolOptions {
+export type PoolOptions = {
   /** Minimum number of connections to maintain */
   minConnections?: number
 
@@ -373,7 +373,7 @@ export interface PoolOptions {
 /**
  * Pool statistics for monitoring
  */
-export interface PoolStats {
+export type PoolStats = {
   /** Total connections in pool */
   totalConnections: number
 
@@ -394,7 +394,7 @@ export interface PoolStats {
 /**
  * Retry configuration for transient failures
  */
-export interface RetryOptions {
+export type RetryOptions = {
   /** Maximum number of retry attempts */
   maxRetries?: number
 
@@ -435,7 +435,7 @@ export type SubscriptionMode = (typeof SubscriptionMode)[keyof typeof Subscripti
 /**
  * Options for subscribing to real-time data
  */
-export interface SubscribeOptions {
+export type SubscribeOptions = {
   /** Subscription mode (default: CHANGES_ONLY) */
   mode?: SubscriptionMode
 
@@ -479,7 +479,7 @@ export type SubscriptionMessageType =
 /**
  * Metadata for subscription messages sent via FlightData.appMetadata
  */
-export interface SubscriptionMetadata {
+export type SubscriptionMetadata = {
   /** Type of message */
   type: SubscriptionMessageType
 
@@ -502,7 +502,7 @@ export interface SubscriptionMetadata {
 /**
  * Handle for an active subscription with control methods
  */
-export interface SubscriptionHandle<T = RecordBatch> extends AsyncIterable<T> {
+export type SubscriptionHandle<T = RecordBatch> = {
   /** Unique ID for this subscription */
   readonly id: string
 
@@ -516,8 +516,8 @@ export interface SubscriptionHandle<T = RecordBatch> extends AsyncIterable<T> {
   readonly reconnectCount: number
 
   /** Manually get the next batch */
-  next(): Promise<IteratorResult<T>>
+  next: () => Promise<IteratorResult<T>>
 
   /** Unsubscribe and close the connection */
-  unsubscribe(): Promise<void>
-}
+  unsubscribe: () => Promise<void>
+} & AsyncIterable<T>
