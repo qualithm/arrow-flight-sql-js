@@ -1,96 +1,49 @@
 # CONTEXT.md
 
-> **This is the single source of truth for this repository.**
->
-> When CONTEXT.md conflicts with any other document (README, code comments), CONTEXT.md is correct.
-> Update other documents to match, not the reverse.
+> **Single source of truth.** When CONTEXT.md conflicts with other docs, CONTEXT.md is correct.
 
 ---
 
 ## System Intent
 
-A standards-compliant Arrow Flight SQL client for JavaScript/TypeScript. This library provides a
-native JavaScript implementation for communicating with Arrow Flight SQL servers, handling all
-aspects of the protocol including:
+Standards-compliant Arrow Flight SQL client for JavaScript/TypeScript. Native implementation for
+gRPC/HTTP2 transport, protobuf serialization, connection pooling, Arrow IPC streaming, query
+execution, prepared statements, catalog introspection, and authentication.
 
-- **gRPC/HTTP2 Transport** – Standards-based communication with Flight SQL servers
-- **Protocol Buffers** – Full protobuf serialization/deserialization for Flight SQL messages
-- **Connection Management** – Robust connection handling with automatic reconnection
-- **Connection Pooling** – Efficient reuse of connections for high-throughput scenarios
-- **Arrow IPC** – Streaming and batch Arrow data over the wire
-- **Query Execution** – Execute SQL queries, prepared statements, and catalog introspection
-- **Authentication** – Support for bearer tokens, basic auth, and custom auth handlers
+**Design:** Modeled on Java (API surface), C++ (streaming patterns), Go (pooling) implementations.
 
-### Design Philosophy
+**Runtimes:** Node.js 20+, Bun, Edge (Cloudflare Workers), Browser (gRPC-web).
 
-This client is modeled on the canonical Arrow Flight SQL implementations:
-
-1. **Apache Arrow Flight SQL (Java)** – The reference implementation
-2. **Apache Arrow Flight SQL (C++)** – High-performance native implementation
-3. **Apache Arrow Flight SQL (Go)** – Clean, idiomatic patterns
-
-We adopt the best patterns from each:
-
-- Java's comprehensive API surface and error handling
-- C++'s performance-oriented streaming patterns
-- Go's connection pooling and context management
-
-### Target Runtimes
-
-- Node.js 20+ (primary)
-- Bun (primary, used for development)
-- Edge runtimes with HTTP/2 support (Cloudflare Workers with custom builds)
-- Browser (where gRPC-web or HTTP/2 is available)
-
-### Relationship to Qualithm Lakehouse
-
-This library is developed as part of the Qualithm ecosystem (tracked in `lakehouse/CONTEXT.md` M4)
-but is designed as a **standalone, general-purpose** Arrow Flight SQL client. The lakehouse is one
-consumer; the library must work with any compliant Flight SQL server.
+**Scope:** Standalone library; works with any Flight SQL server (Qualithm Lakehouse is one
+consumer).
 
 ---
 
 ## Current Reality
 
-**Status: M1+M2+M3+M4+M5+M6+M7 Complete – Full Push Subscription Support**
+**Status: M1–M7 Complete** — Production-ready client with real-time subscriptions.
 
-The project has a complete, production-ready Arrow Flight SQL client with real-time subscriptions:
+### Core Modules
 
-- `src/client.ts` – Main `FlightSqlClient`, `QueryResult`, `PreparedStatement`, `Subscription`
-  classes ✅
-- `src/pool.ts` – Connection pool with health checking and graceful shutdown ✅
-- `src/retry.ts` – Retry logic with exponential backoff and jitter ✅
-- `src/metrics.ts` – Observability hooks with pluggable handlers ✅
-- `src/types.ts` – TypeScript type definitions for Flight SQL + subscriptions ✅
-- `src/proto.ts` – Manual protobuf encoding/decoding for Flight SQL commands ✅
-- `src/arrow.ts` – Arrow IPC parsing utilities ✅
-- `src/errors.ts` – Custom error types with gRPC status mapping ✅
-- `src/query-builder.ts` – Fluent SQL query builder for type-safe query construction ✅
-- `src/index.ts` – Public API exports ✅
-- `src/generated/index.ts` – Proto loader utilities ✅
+| Module             | Purpose                                    |
+| ------------------ | ------------------------------------------ |
+| `client.ts`        | FlightSqlClient, QueryResult, Subscription |
+| `pool.ts`          | Connection pooling with health checks      |
+| `retry.ts`         | Exponential backoff with jitter            |
+| `metrics.ts`       | Pluggable observability handlers           |
+| `proto.ts`         | Manual protobuf encoding/decoding          |
+| `arrow.ts`         | Arrow IPC parsing utilities                |
+| `errors.ts`        | Custom errors with gRPC status mapping     |
+| `query-builder.ts` | Fluent SQL query builder                   |
 
-### Test Coverage
+### Tests
 
-- `src/__tests__/unit/errors.test.ts` – Error type tests (27 tests) ✅
-- `src/__tests__/unit/retry.test.ts` – Retry logic tests (31 tests) ✅
-- `src/__tests__/unit/proto.test.ts` – Protobuf encoding tests (32 tests) ✅
-- `src/__tests__/unit/metrics.test.ts` – Metrics handler tests (38 tests) ✅
-- `src/__tests__/unit/subscription.test.ts` – Subscription type tests (26 tests) ✅
-- `src/__tests__/unit/query-builder.test.ts` – Query builder tests (80 tests) ✅
-- `src/__tests__/integration/lakehouse.test.ts` – Integration tests (17 pass, 2 skip) ✅
-
-### npm Publication Ready
-
-- `package.json` – Full npm metadata (name, description, keywords, license, repository)
-- `tsconfig.build.json` – Build configuration for distribution
-- `LICENSE` – MIT license file
-- Build output: `dist/` with ESM, declarations, source maps
+Unit: 234 tests (errors: 27, retry: 31, proto: 32, metrics: 38, subscription: 26, query-builder: 80)
+Integration: 17 pass, 2 skip (prepared statements blocked server-side)
 
 ### Dependencies
 
-- `@grpc/grpc-js` – gRPC transport (1.14.3)
-- `@grpc/proto-loader` – Dynamic proto loading (0.8.0)
-- `apache-arrow` – Arrow IPC format handling (21.1.0)
+`@grpc/grpc-js` 1.14.3 · `@grpc/proto-loader` 0.8.0 · `apache-arrow` 21.1.0
 
 ---
 
@@ -141,265 +94,38 @@ The project has a complete, production-ready Arrow Flight SQL client with real-t
 
 ---
 
-## Next Milestones
+## Milestones
 
-### M1: Core Protocol Foundation ✅
+### Completed ✅
 
-- [x] Define TypeScript types for Flight SQL messages
-- [x] Implement protobuf serialization/deserialization
-- [x] Basic gRPC transport layer
-- [x] Handshake and authentication flow
+| M#  | Name            | Summary                                                       |
+| --- | --------------- | ------------------------------------------------------------- |
+| M1  | Core Protocol   | Types, protobuf, gRPC transport, auth                         |
+| M2  | Query Execution | query/execute, FlightInfo, DoGet/DoPut, prepared statements   |
+| M3  | Connection Mgmt | Pooling, retry with backoff, health checks, graceful shutdown |
+| M4  | Catalog         | getCatalogs/Schemas/Tables/TableTypes, key introspection      |
+| M5  | Production      | Error types, metrics hooks, 234 tests, benchmarks             |
+| M6  | npm Publish     | Integration tests, npm config, TypeDoc, GitHub Pages          |
+| M7  | Subscriptions   | DoExchange, subscribe() API, heartbeats, reconnection         |
 
-### M2: Query Execution ✅
+**Known Limitations:**
 
-- [x] `query()` / `execute()` – Execute SQL statements returning Arrow streams
-- [x] `getFlightInfo()` – Query metadata retrieval
-- [x] `doGet()` – Fetch Arrow record batches
-- [x] `doPut()` – Upload Arrow data
-- [x] Prepared statement support (`prepare()`, `PreparedStatement` class)
+- Prepared statements: Server-side `get_flight_info_prepared_statement` not implemented (2 tests
+  skipped)
 
-### M3: Connection Management ✅
+### M8: Cross-Runtime Compatibility (Next)
 
-- [x] Connection pooling with configurable limits (`FlightSqlPool`)
-- [x] Automatic reconnection with exponential backoff (`RetryPolicy`, `withRetry`)
-- [x] Health checking and connection validation
-- [x] Graceful shutdown
+Enable Node.js, Deno, Bun support. Currently `@grpc/grpc-js` is Node-specific.
 
-### M4: Catalog Introspection ✅
+**Tasks:**
 
-- [x] `getCatalogs()` – List available catalogs
-- [x] `getSchemas()` – List schemas in catalog
-- [x] `getTables()` – List tables with filtering
-- [x] `getTableTypes()` – List table type names
-- [x] `getPrimaryKeys()` / `getExportedKeys()` / `getImportedKeys()`
+- [ ] Runtime detection (global checks for Bun/Deno/Node/browser)
+- [ ] Transport abstraction (swappable gRPC implementations)
+- [ ] Conditional package.json exports per runtime
+- [ ] CI test matrix: Node 20+, Deno 1.40+, Bun 1.0+
+- [ ] Bundle analysis (no Node-specific leaks in universal paths)
 
-### M5: Production Readiness ✅
-
-- [x] Comprehensive error types and handling
-- [x] Metrics and observability hooks (`MetricsHandler`, `ConsoleMetricsHandler`,
-      `InMemoryMetricsHandler`)
-- [x] Full test coverage (unit: 234 tests across 6 files)
-- [x] Documentation and examples (README updated)
-- [x] Performance benchmarks (`benchmarks/` directory, `bun run bench`)
-
-### M6: npm Publication ✅
-
-- [x] Integration test infrastructure (`src/__tests__/integration/`)
-- [x] Verify interop with lakehouse server (connection, error handling working)
-- [x] npm package configuration (package.json, tsconfig.build.json, LICENSE)
-- [x] Build system for distribution (`bun run build` → `dist/`)
-- [x] Publish `@qualithm/arrow-flight-sql-js` to npm (via `.github/workflows/release.yaml`)
-- [x] TypeDoc API documentation generation (`bun run docs` → `docs/api/`)
-- [x] GitHub Pages deployment workflow (`.github/workflows/docs.yaml`)
-
-**Interoperability Notes:**
-
-- Connection and authentication: ✅ Working
-- Query execution with FlightInfo: ✅ Working (12 tests pass)
-- Catalog introspection (GetCatalogs, GetSchemas, etc.): ✅ Working (fixed 2026-02-09, server-side
-  ticket encoding)
-- Prepared statement execution: ⚠️ Server-side not implemented
-  (`get_flight_info_prepared_statement`)
-- Schema parsing from FlightInfo: ✅ Fixed (uses `MessageReader.readSchema()`)
-- Streaming results: ✅ Fixed (proper IPC framing with continuation token + length prefix)
-
-**Integration Test Status (2026-02-09):**
-
-The lakehouse server configuration was confirmed correct on 2026-02-09:
-
-- Server uses `FlightServiceServer::new(LakehouseFlightSqlService)` ✅
-- arrow-flight v57 provides blanket `impl FlightService for T where T: FlightSqlService + Send` ✅
-- This blanket impl decodes `CommandGetCatalogs`, `CommandGetSchemas`, etc. and dispatches to trait
-  methods ✅
-- `FlightSqlServiceServer` does NOT exist in arrow-flight v57 — the earlier analysis was incorrect
-- All 55 lakehouse-flight Rust tests pass
-
-**Current test results: 17 pass, 2 skip, 0 fail**
-
-The 2 skipped tests are for prepared statement execution:
-
-1. **Prepared statement executeQuery** — Server returns "get_flight_info_prepared_statement has no
-   default implementation"
-2. **Prepared statement multiple execution** — Same server-side issue
-
-**Fixed issues:**
-
-- **Catalog commands (2026-02-09)** — Server was encoding tickets without `as_any()` wrapper,
-  causing DoGet to fall through to SQL execution. Fixed in `lakehouse-flight/src/sql.rs`.
-
-### M7: Push Subscriptions (DoExchange Support) ✅
-
-Enable real-time push subscriptions via Arrow Flight's `DoExchange` RPC.
-
-**Problem:** Current client only supports request-response patterns (`DoGet`, `DoPut`). Cannot
-subscribe to live data streams.
-
-**Solution:** Implement `DoExchange` for bidirectional streaming + high-level `subscribe()` API.
-
-**Implementation:**
-
-- [x] `doExchange()` — bidirectional streaming RPC (client sends FlightData, server streams
-      FlightData)
-- [x] Subscription protocol — encode subscribe/unsubscribe commands in FlightData `appMetadata`
-- [x] `subscribe(query, options)` — high-level API returning `AsyncGenerator<RecordBatch>`
-- [x] Heartbeat handling — process server heartbeats, detect stale connections
-- [x] Reconnection — automatic resubscribe on connection loss with configurable backoff
-- [x] Cancellation — clean unsubscribe on `AbortSignal` or explicit `unsubscribe()`
-- [x] Metrics — `subscription_batches_received`, `subscription_reconnects`,
-      `subscription_latency_ms`
-
-**API Design:**
-
-```typescript
-import { FlightSqlClient } from "@qualithm/arrow-flight-sql-js"
-
-const client = new FlightSqlClient({ host: "localhost", port: 50051 })
-await client.connect()
-
-// High-level subscription API
-const subscription = await client.subscribe("SELECT * FROM events WHERE status = 'pending'", {
-  mode: "CHANGES_ONLY", // 'FULL' | 'CHANGES_ONLY' | 'TAIL'
-  heartbeatMs: 30_000, // Server heartbeat interval
-  signal: abortController.signal // Cancellation
-})
-
-// Consume as async iterator
-for await (const batch of subscription) {
-  console.log(`Received ${batch.numRows} rows`)
-}
-
-// Or manual control
-const sub = await client.subscribe(query)
-await sub.next() // Get next batch
-await sub.unsubscribe() // Clean disconnect
-```
-
-**Low-level DoExchange:**
-
-```typescript
-// For custom bidirectional protocols
-const exchange = client.doExchange(descriptor)
-
-// Send data to server
-await exchange.send(flightData)
-
-// Receive data from server
-for await (const response of exchange) {
-  process(response)
-}
-
-// Half-close (signal end of client stream)
-await exchange.end()
-```
-
-**Protocol:**
-
-```
-Client                                Server
-  │                                     │
-  │── FlightData(SUBSCRIBE, query) ───▶│
-  │                                     │
-  │◀── FlightData(schema) ─────────────│
-  │◀── FlightData(initial batch) ──────│
-  │◀── FlightData(HEARTBEAT) ──────────│  (keep-alive)
-  │◀── FlightData(change batch) ───────│  (on new data)
-  │        ...                          │
-  │── FlightData(UNSUBSCRIBE) ────────▶│
-  │◀── FlightData(COMPLETE) ───────────│
-```
-
-**Dependencies:**
-
-- Requires Lakehouse M5 (Push Subscriptions) server-side implementation
-- Uses existing gRPC bidirectional streaming support in `@grpc/grpc-js`
-
-Acceptance: Subscription receives batches within 100ms of server push. Reconnects automatically on
-transient failures. Clean cancellation releases all resources. Works with Qualithm Lakehouse
-subscription endpoints.
-
-### M8: Cross-Runtime Compatibility (Node.js, Deno, Bun)
-
-Enable the library to work seamlessly across Node.js, Deno, and Bun runtimes.
-
-**Problem:** Currently, `@grpc/grpc-js` is Node.js-specific. While Bun has Node.js compatibility,
-Deno requires explicit Node compat mode. The library lacks runtime detection and conditional imports
-for optimal performance in each environment.
-
-**Solution:** Abstract transport layer, add runtime detection, and provide runtime-specific
-optimizations.
-
-**Implementation:**
-
-- [ ] **Runtime detection** — Detect Node.js, Deno, Bun at runtime via global checks
-- [ ] **Transport abstraction** — Abstract gRPC transport behind interface for swappable
-      implementations
-- [ ] **Bun-native gRPC** — Use Bun's native HTTP/2 when available for better performance
-- [ ] **Deno compatibility** — Ensure `node:` imports work via Deno's Node compat layer
-- [ ] **Conditional exports** — Add `package.json` exports for runtime-specific entry points
-- [ ] **Polyfill strategy** — Document required polyfills (if any) per runtime
-- [ ] **Test matrix** — CI tests on Node.js 20+, Deno 1.40+, Bun 1.0+
-- [ ] **Bundle analysis** — Ensure no Node.js-specific APIs leak into universal code paths
-
-**Package.json Exports:**
-
-```json
-{
-  "exports": {
-    ".": {
-      "bun": "./dist/index.bun.js",
-      "deno": "./dist/index.deno.js",
-      "node": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
-  }
-}
-```
-
-**Runtime Detection:**
-
-```typescript
-export type Runtime = "node" | "deno" | "bun" | "browser" | "unknown"
-
-export function detectRuntime(): Runtime {
-  if (typeof Bun !== "undefined") return "bun"
-  if (typeof Deno !== "undefined") return "deno"
-  if (typeof process !== "undefined" && process.versions?.node) return "node"
-  if (typeof window !== "undefined") return "browser"
-  return "unknown"
-}
-```
-
-**Transport Interface:**
-
-```typescript
-interface GrpcTransport {
-  createChannel(address: string, credentials: ChannelCredentials): GrpcChannel
-  createClient<T>(channel: GrpcChannel, service: ServiceDefinition): T
-  close(channel: GrpcChannel): Promise<void>
-}
-
-// Node.js implementation uses @grpc/grpc-js
-// Bun implementation uses native HTTP/2 + grpc-js compat
-// Deno implementation uses Node compat or native when available
-```
-
-**Testing Strategy:**
-
-| Runtime | Version | Test Command                     | CI Matrix |
-| ------- | ------- | -------------------------------- | --------- |
-| Node.js | 20, 22  | `node --test`                    | ✓         |
-| Bun     | 1.0+    | `bun test`                       | ✓         |
-| Deno    | 1.40+   | `deno test --allow-net --compat` | ✓         |
-
-**Dependencies:**
-
-- May require `@aspect-build/gzip` or similar for Deno bundle compression
-- Consider `protobuf-es` as lighter protobuf runtime for non-Node environments
-- Investigate `connect-es` for potential gRPC-web universal transport
-
-Acceptance: `bun test`, `deno test`, and `npm test` all pass. Package installs and imports correctly
-in all three runtimes. No runtime-specific code in main exports without conditional loading. README
-documents runtime-specific installation/usage notes.
+**Acceptance:** `bun test`, `deno test`, `npm test` all pass; package works in all runtimes.
 
 ---
 
