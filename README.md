@@ -52,20 +52,27 @@ const client = new FlightSqlClient({
   host: "localhost",
   port: 31337,
   tls: true,
-  token: "your-bearer-token"
+  auth: { type: "bearer", token: "your-bearer-token" }
 })
 
+// Connect to the server
+await client.connect()
+
 // Execute a query
-const stream = await client.execute("SELECT * FROM my_table LIMIT 100")
+const result = await client.query("SELECT * FROM my_table LIMIT 100")
 
 // Process Arrow record batches
-for await (const batch of stream) {
+for await (const batch of result.stream()) {
   console.log(`Received ${batch.numRows} rows`)
   // batch is an Arrow RecordBatch
 }
 
+// Or collect all results into a table
+const table = await result.collect()
+console.log(`Total rows: ${table.numRows}`)
+
 // Clean up
-await client.close()
+client.close()
 ```
 
 ## Connection Pooling
@@ -73,28 +80,41 @@ await client.close()
 ```typescript
 import { FlightSqlPool } from "@qualithm/arrow-flight-sql-js"
 
-const pool = new FlightSqlPool({
-  host: "localhost",
-  port: 31337,
-  // Pool configuration
-  minConnections: 2,
-  maxConnections: 10,
-  idleTimeoutMs: 30000
-})
+// Create a pool with client and pool configuration
+const pool = new FlightSqlPool(
+  // Client options
+  {
+    host: "localhost",
+    port: 31337,
+    tls: false,
+    auth: { type: "basic", username: "admin", password: "secret" }
+  },
+  // Pool options
+  {
+    minConnections: 2,
+    maxConnections: 10,
+    idleTimeoutMs: 30_000
+  }
+)
+
+// Initialize the pool (creates minConnections)
+await pool.initialize()
 
 // Acquire a client from the pool
 const client = await pool.acquire()
 try {
-  const stream = await client.execute("SELECT 1")
+  const result = await client.query("SELECT 1")
+  const table = await result.collect()
   // ... process results
 } finally {
   // Return to pool
   pool.release(client)
 }
 
-// Or use the convenience method
-const results = await pool.withClient(async (client) => {
-  return client.execute("SELECT * FROM users")
+// Or use the convenience method (handles acquire/release automatically)
+await pool.withConnection(async (client) => {
+  const result = await client.query("SELECT * FROM users")
+  return result.collect()
 })
 
 // Graceful shutdown
@@ -112,14 +132,14 @@ const client = new FlightSqlClient({
   host: "localhost",
   port: 31337,
   tls: true,
-  token: "your-bearer-token"
+  auth: { type: "bearer", token: "your-bearer-token" }
 })
 
 await client.connect()
 
 // Subscribe to real-time updates
 const subscription = client.subscribe("SELECT * FROM events WHERE status = 'pending'", {
-  mode: SubscriptionMode.CHANGES_ONLY, // 'FULL' | 'CHANGES_ONLY' | 'TAIL'
+  mode: SubscriptionMode.ChangesOnly, // Full | ChangesOnly | Tail
   heartbeatMs: 30_000 // Server heartbeat interval
 })
 
@@ -130,7 +150,7 @@ for await (const batch of subscription) {
 
 // Or with cancellation
 const controller = new AbortController()
-const subscription = client.subscribe(query, {
+const cancelableSubscription = client.subscribe(query, {
   signal: controller.signal,
   autoReconnect: true,
   maxReconnectAttempts: 10
@@ -140,20 +160,20 @@ const subscription = client.subscribe(query, {
 controller.abort()
 
 // Or manually unsubscribe
-await subscription.unsubscribe()
+await cancelableSubscription.unsubscribe()
 ```
 
 ### Subscription Options
 
-| Option                 | Default        | Description                                        |
-| ---------------------- | -------------- | -------------------------------------------------- |
-| `mode`                 | `CHANGES_ONLY` | Subscription mode (FULL, CHANGES_ONLY, TAIL)       |
-| `heartbeatMs`          | `30000`        | Server heartbeat interval in milliseconds          |
-| `signal`               | -              | AbortSignal for cancellation                       |
-| `autoReconnect`        | `true`         | Auto-reconnect on connection loss                  |
-| `maxReconnectAttempts` | `10`           | Maximum reconnection attempts                      |
-| `reconnectDelayMs`     | `1000`         | Initial reconnect delay                            |
-| `maxReconnectDelayMs`  | `30000`        | Maximum reconnect delay (with exponential backoff) |
+| Option                 | Default       | Description                                        |
+| ---------------------- | ------------- | -------------------------------------------------- |
+| `mode`                 | `ChangesOnly` | Subscription mode (Full, ChangesOnly, Tail)        |
+| `heartbeatMs`          | `30000`       | Server heartbeat interval in milliseconds          |
+| `signal`               | -             | AbortSignal for cancellation                       |
+| `autoReconnect`        | `true`        | Auto-reconnect on connection loss                  |
+| `maxReconnectAttempts` | `10`          | Maximum reconnection attempts                      |
+| `reconnectDelayMs`     | `1000`        | Initial reconnect delay                            |
+| `maxReconnectDelayMs`  | `30000`       | Maximum reconnect delay (with exponential backoff) |
 
 ### Low-Level DoExchange
 
@@ -198,6 +218,8 @@ import {
 const client = new FlightSqlClient({
   host: "localhost",
   port: 31337,
+  tls: false,
+  auth: { type: "none" },
   metrics: new ConsoleMetricsHandler()
 })
 // Output: [FlightSQL Metrics] ✓ query success (42ms)
@@ -207,11 +229,15 @@ const metricsHandler = new InMemoryMetricsHandler()
 const testClient = new FlightSqlClient({
   host: "localhost",
   port: 31337,
+  tls: false,
+  auth: { type: "none" },
   metrics: metricsHandler
 })
 
 // Query metrics after operations
-await testClient.execute("SELECT 1")
+await testClient.connect()
+const result = await testClient.query("SELECT 1")
+await result.collect()
 console.log(metricsHandler.getAverageDuration("query"))
 console.log(metricsHandler.getErrorRate("query"))
 console.log(metricsHandler.getSummary())
@@ -261,7 +287,8 @@ import {
 } from "@qualithm/arrow-flight-sql-js"
 
 try {
-  await client.execute("SELECT * FROM missing_table")
+  const result = await client.query("SELECT * FROM missing_table")
+  await result.collect()
 } catch (error) {
   if (error instanceof QueryError) {
     console.error("SQL Error:", error.message)
@@ -285,6 +312,8 @@ import { FlightSqlClient, RetryPolicy, retryPolicies } from "@qualithm/arrow-fli
 const client = new FlightSqlClient({
   host: "localhost",
   port: 31337,
+  tls: false,
+  auth: { type: "bearer", token: "my-token" },
   retry: retryPolicies.default // 3 retries, exponential backoff
 })
 
@@ -311,6 +340,8 @@ const customPolicy = new RetryPolicy({
 const clientWithCustomRetry = new FlightSqlClient({
   host: "localhost",
   port: 31337,
+  tls: false,
+  auth: { type: "bearer", token: "my-token" },
   retry: customPolicy
 })
 ```
@@ -360,16 +391,15 @@ Use prepared statements for parameterized queries:
 const stmt = await client.prepare("SELECT * FROM users WHERE id = ? AND status = ?")
 
 try {
-  // Bind parameters and execute
-  const stream = await stmt.execute([userId, "active"])
+  // Execute the query (returns a QueryResult)
+  const result = await stmt.executeQuery()
 
-  for await (const batch of stream) {
+  for await (const batch of result.stream()) {
     console.log(`Received ${batch.numRows} rows`)
   }
 
-  // Execute again with different parameters
-  const stream2 = await stmt.execute([otherUserId, "pending"])
-  // ...
+  // Or collect all results
+  const table = await result.collect()
 } finally {
   // Always close prepared statements
   await stmt.close()
@@ -384,23 +414,35 @@ The main client for interacting with Flight SQL servers.
 
 #### Constructor Options
 
-| Option     | Type                     | Default | Description             |
-| ---------- | ------------------------ | ------- | ----------------------- |
-| `host`     | `string`                 | —       | Server hostname         |
-| `port`     | `number`                 | `443`   | Server port             |
-| `tls`      | `boolean`                | `true`  | Enable TLS              |
-| `token`    | `string`                 | —       | Bearer token for auth   |
-| `username` | `string`                 | —       | Basic auth username     |
-| `password` | `string`                 | —       | Basic auth password     |
-| `headers`  | `Record<string, string>` | —       | Custom metadata headers |
-| `timeout`  | `number`                 | `30000` | Request timeout in ms   |
+| Option             | Type                     | Default | Description                     |
+| ------------------ | ------------------------ | ------- | ------------------------------- |
+| `host`             | `string`                 | —       | Server hostname                 |
+| `port`             | `number`                 | —       | Server port                     |
+| `tls`              | `boolean`                | `true`  | Enable TLS                      |
+| `auth`             | `AuthConfig`             | —       | Authentication configuration    |
+| `credentials`      | `ChannelCredentials`     | —       | Custom gRPC channel credentials |
+| `metadata`         | `Record<string, string>` | —       | Custom metadata headers         |
+| `connectTimeoutMs` | `number`                 | `30000` | Connection timeout in ms        |
+| `requestTimeoutMs` | `number`                 | `60000` | Request timeout in ms           |
+
+##### AuthConfig
+
+```typescript
+type AuthConfig =
+  | { type: "bearer"; token: string }
+  | { type: "basic"; username: string; password: string }
+  | { type: "none" }
+```
 
 #### Methods
 
 ##### Query Execution
 
-- `execute(query: string, options?): AsyncIterable<RecordBatch>` – Execute SQL, stream results
-- `executeUpdate(query: string): Promise<number>` – Execute DML, return affected rows
+- `query(query: string, options?): Promise<QueryResult>` – Execute SQL, returns result with
+  `stream()` and `collect()` methods
+- `execute(query: string, options?): Promise<FlightInfo>` – _(deprecated)_ Execute SQL, return
+  flight info
+- `executeUpdate(query: string): Promise<bigint>` – Execute DML, return affected rows
 - `prepare(query: string): Promise<PreparedStatement>` – Create prepared statement
 
 ##### Catalog Introspection
@@ -422,7 +464,8 @@ The main client for interacting with Flight SQL servers.
 
 ##### Connection Management
 
-- `close(): Promise<void>` – Close connection
+- `connect(): Promise<void>` – Establish connection and authenticate
+- `close(): void` – Close connection and release resources
 - `isConnected(): boolean` – Check connection status
 
 ## Architecture
