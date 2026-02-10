@@ -37,7 +37,7 @@ const retryableGrpcCodes = new Set([
  */
 export function isRetryableGrpcError(error: unknown): boolean {
   if (error instanceof Error && "code" in error) {
-    const {code} = (error as { code: number })
+    const { code } = error as { code: number }
     return retryableGrpcCodes.has(code)
   }
   return false
