@@ -68,7 +68,13 @@ jobs:
 
       - name: Publish to npm
         if: steps.version_check.outputs.exists == 'false'
-        run: npm publish --access public --provenance
+        run: |
+          echo "npm version: $(npm --version)"
+          echo "node version: $(node --version)"
+          cat ~/.npmrc || true
+          npm publish --access public --provenance
+        env:
+          NPM_CONFIG_PROVENANCE: true
 
   deploy_docs:
     name: Deploy Docs
