@@ -231,6 +231,18 @@ export default defineConfig([
   },
 
   // ---------------------------------------------------------------------------
+  // Declaration files
+  // ---------------------------------------------------------------------------
+  {
+    name: "declaration-file-overrides",
+    files: ["**/*.d.ts"],
+    rules: {
+      // Interface merging is required for augmenting global types like ProcessEnv
+      "@typescript-eslint/consistent-type-definitions": "off"
+    }
+  },
+
+  // ---------------------------------------------------------------------------
   // Scripts & Migrations
   // ---------------------------------------------------------------------------
   {
