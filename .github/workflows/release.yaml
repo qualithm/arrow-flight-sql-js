@@ -42,7 +42,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Debug OIDC
@@ -50,6 +50,7 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "Workflow ref: ${{ github.workflow_ref }}"
           echo "Ref: ${{ github.ref }}"
+          echo "npm version: $(npm --version)"
 
       - name: Check if version exists on npm
         id: version_check
@@ -68,13 +69,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.version_check.outputs.exists == 'false'
-        run: |
-          echo "npm version: $(npm --version)"
-          echo "node version: $(node --version)"
-          cat ~/.npmrc || true
-          npm publish --access public --provenance
-        env:
-          NPM_CONFIG_PROVENANCE: true
+        run: npm publish --access public
 
   deploy_docs:
     name: Deploy Docs
