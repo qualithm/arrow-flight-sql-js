@@ -6,15 +6,15 @@ echo "Running pre-commit checks..."
 
 # ESLint
 echo "→ Running ESLint..."
-bun run eslint .
+bun run lint
 
 # Prettier
 echo "→ Running Prettier..."
-bun run prettier --check .
+bun run format
 
 # TypeScript
 echo "→ Running TypeScript type check..."
-bun run tsc --noEmit
+bun run typecheck
 
 # Tests
 echo "→ Running unit tests..."
