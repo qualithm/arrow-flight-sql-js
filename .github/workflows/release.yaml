@@ -45,6 +45,12 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Debug OIDC
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Workflow ref: ${{ github.workflow_ref }}"
+          echo "Ref: ${{ github.ref }}"
+
       - name: Check if version exists on npm
         id: version_check
         run: |
