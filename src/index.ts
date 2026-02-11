@@ -173,3 +173,38 @@ export {
   select,
   update
 } from "./query-builder"
+
+// Runtime detection
+export type { RuntimeInfo, RuntimeType } from "./runtime"
+export {
+  assertRuntime,
+  clearRuntimeCache,
+  detectRuntime,
+  requiresGrpcWeb,
+  Runtime,
+  supportsGrpcJs
+} from "./runtime"
+
+// Transport abstraction
+export type {
+  DuplexStream,
+  FlightTransport,
+  RawAction,
+  RawActionResult,
+  RawActionType,
+  RawFlightData,
+  RawFlightInfo,
+  RawHandshakeMessage,
+  RawPutResult,
+  RawTicket,
+  ReadableStream,
+  TransportError,
+  TransportFactory,
+  TransportMetadata,
+  TransportOptions,
+  WritableStream
+} from "./transport"
+export { getRegisteredRuntimes, getTransportFactory, registerTransport } from "./transport"
+
+// gRPC-JS transport (Node.js/Bun)
+export { createGrpcJsTransport, getTransportForRuntime, GrpcJsTransport } from "./transport-grpc-js"

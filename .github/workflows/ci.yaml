@@ -47,14 +47,60 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
 
-  # test:
-  #   name: Test
+  test-bun:
+    name: Test (Bun ${{ matrix.bun-version }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        bun-version: ["1.0", "1.1", "latest"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun-version }}
+      - run: bun install --frozen-lockfile
+      - run: bun test:unit
+      - name: Report Bun version
+        run: bun --version
+
+  test-node:
+    name: Test (Node.js ${{ matrix.node-version }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Build
+        run: bun run build
+      - name: Verify module loads in Node.js
+        run: node -e "import('./dist/index.js').then(m => { console.log('Module loaded successfully'); console.log('Exports:', Object.keys(m).length); if (!m.FlightSqlClient) throw new Error('FlightSqlClient not exported'); if (!m.detectRuntime) throw new Error('detectRuntime not exported'); console.log('Runtime:', m.detectRuntime()); })"
+      - name: Report Node.js version
+        run: node --version
+
+  # Deno support is planned for M8 but requires additional transport work
+  # test-deno:
+  #   name: Test (Deno ${{ matrix.deno-version }})
   #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       deno-version: ["1.40", "1.41", "latest"]
   #   steps:
   #     - uses: actions/checkout@v5
-  #     - uses: oven-sh/setup-bun@v2
-  #     - run: bun install --frozen-lockfile
-  #     - run: bun test:unit
+  #     - uses: denoland/setup-deno@v1
+  #       with:
+  #         deno-version: ${{ matrix.deno-version }}
+  #     - run: deno test
+  #     - name: Report Deno version
+  #       run: deno --version
 
   audit:
     name: Dependency Audit

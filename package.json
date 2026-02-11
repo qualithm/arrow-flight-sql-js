@@ -28,8 +28,24 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "bun": "./dist/index.js",
+      "node": "./dist/index.js",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./runtime": {
+      "import": "./dist/runtime.js",
+      "types": "./dist/runtime.d.ts"
+    },
+    "./transport": {
+      "import": "./dist/transport.js",
+      "types": "./dist/transport.d.ts"
+    },
+    "./transport/grpc-js": {
+      "bun": "./dist/transport-grpc-js.js",
+      "node": "./dist/transport-grpc-js.js",
+      "import": "./dist/transport-grpc-js.js",
+      "types": "./dist/transport-grpc-js.d.ts"
     }
   },
   "files": [
@@ -42,7 +58,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && bun run scripts/fix-imports.ts",
     "build:watch": "tsc -p tsconfig.build.json --watch",
     "clean": "rm -rf dist",
     "dev": "bun --watch run src/index.ts",
@@ -60,7 +76,8 @@
     "test:unit": "bun test src/__tests__/unit",
     "test:watch": "bun test --watch",
     "typecheck": "tsc -p tsconfig.node.json --noEmit",
-    "bench": "bun run benchmarks/index.ts"
+    "bench": "bun run benchmarks/index.ts",
+    "analyze": "bun run scripts/analyze-bundle.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "1.14.3",
