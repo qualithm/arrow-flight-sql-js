@@ -137,6 +137,23 @@ function wrapInAny(typeUrl: string, message: Uint8Array): Uint8Array {
 }
 
 /**
+ * Unwrap a protobuf Any type envelope
+ *
+ * Extracts the inner message bytes from an Any wrapper.
+ * Returns undefined if the buffer doesn't look like an Any message.
+ */
+export function unwrapAny(buffer: Uint8Array): { typeUrl: string; value: Uint8Array } | undefined {
+  const fields = parseProtoFields(buffer)
+  const typeUrl = getStringField(fields, 1)
+  const value = getBytesField(fields, 2)
+
+  if (typeUrl !== undefined && typeUrl.length > 0 && value !== undefined) {
+    return { typeUrl, value }
+  }
+  return undefined
+}
+
+/**
  * Encode CommandStatementQuery message
  *
  * message CommandStatementQuery {

@@ -23,7 +23,8 @@ import {
   encodeCommandStatementQuery,
   encodeCommandStatementUpdate,
   getBytesField,
-  parseProtoFields
+  parseProtoFields,
+  unwrapAny
 } from "./proto"
 import type { FlightTransport, TransportMetadata } from "./transport"
 import { getTransportForRuntime } from "./transport-grpc-js"
@@ -288,12 +289,20 @@ export class FlightSqlClient {
     let parameterSchema: Schema | null = null
 
     for await (const result of this.doAction(action)) {
+      // The result body may be wrapped in a protobuf Any envelope
+      // Try to unwrap it first, otherwise parse directly
+      let messageBytes = result.body
+      const anyWrapper = unwrapAny(result.body)
+      if (anyWrapper) {
+        messageBytes = anyWrapper.value
+      }
+
       // Parse ActionCreatePreparedStatementResult
       // Fields:
       //   1: prepared_statement_handle (bytes)
       //   2: dataset_schema (bytes) - Arrow IPC schema
       //   3: parameter_schema (bytes) - Arrow IPC schema
-      const fields = parseProtoFields(result.body)
+      const fields = parseProtoFields(messageBytes)
 
       handle = getBytesField(fields, 1)
       const datasetSchemaBytes = getBytesField(fields, 2)

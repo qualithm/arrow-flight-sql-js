@@ -239,12 +239,10 @@ describe("Lakehouse Integration", () => {
 
   // ==========================================================================
   // Prepared Statement Tests
-  // BLOCKED: Server returns "get_flight_info_prepared_statement has no default
-  // implementation". Server-side fix needed.
   // ==========================================================================
 
   describe("Prepared Statements", () => {
-    test.skip("should prepare and execute statement", async () => {
+    test("should prepare and execute statement", async () => {
       if (skipIfNoIntegration()) {
         return
       }
@@ -280,7 +278,7 @@ describe("Lakehouse Integration", () => {
       }
     })
 
-    test.skip("should execute prepared statement multiple times", async () => {
+    test("should execute prepared statement multiple times", async () => {
       if (skipIfNoIntegration()) {
         return
       }
