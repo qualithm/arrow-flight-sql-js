@@ -1,0 +1,24 @@
+# Development files
+.DS_Store
+.env*
+.eslint*
+.github/
+.githooks/
+.prettier*
+.vscode/
+
+# Source and build config
+benchmarks/
+data/
+docs/
+scripts/
+src/
+*.config.ts
+tsconfig*.json
+typedoc.json
+bunfig.toml
+
+# Test files
+**/__tests__/
+*.test.ts
+*.bench.ts
