@@ -40,6 +40,12 @@ export type FlightSqlClientOptions = {
 
   /** Custom metadata to include with every request */
   metadata?: Record<string, string>
+
+  /**
+   * Custom transport implementation.
+   * If not provided, a transport is auto-selected based on the runtime.
+   */
+  transport?: unknown
 }
 
 /**

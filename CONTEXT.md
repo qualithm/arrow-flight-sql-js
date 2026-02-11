@@ -127,15 +127,16 @@ Enable Node.js, Deno, Bun support. Currently `@grpc/grpc-js` is Node-specific.
 - [x] Conditional package.json exports per runtime
 - [x] CI test matrix: Node 20+, Bun 1.0+ (Deno deferred)
 - [x] Bundle analysis (no Node-specific leaks in universal paths)
+- [x] Refactor client.ts to use transport abstraction
 - [ ] Deno gRPC transport implementation (deferred—requires grpc-web or native HTTP/2)
 - [ ] Browser gRPC-web transport (deferred)
-- [ ] Refactor client.ts to use transport abstraction
 
 **Completed Work:**
 
 - `runtime.ts`: Detects Bun/Deno/Node/Browser/Worker environments with version info
 - `transport.ts`: Runtime-agnostic transport interface (FlightTransport type)
 - `transport-grpc-js.ts`: GrpcJsTransport implementation for Node/Bun
+- `client.ts`: Refactored to use transport abstraction, no direct gRPC dependency
 - `scripts/analyze-bundle.ts`: Bundle analysis to ensure no cross-runtime leaks
 - CI matrix updated with Bun 1.0/1.1/latest and Node 20/22 verification
 
@@ -167,3 +168,4 @@ Enable Node.js, Deno, Bun support. Currently `@grpc/grpc-js` is Node-specific.
 | 2026-02-09 | Implemented M7 (Push Subscriptions via DoExchange). DoExchange uses `ClientDuplexStream` for bidirectional streaming. Subscription class handles: (1) JSON-encoded subscribe/unsubscribe commands in `appMetadata`, (2) heartbeat processing, (3) automatic reconnection with exponential backoff + jitter, (4) AbortSignal cancellation. ExchangeStream interface provides low-level send/receive/cancel. Added 26 unit tests for subscription types and 5 integration tests. Total unit tests now 154.                                                                                                                                                                                                                                                                                                                              |
 | 2026-02-09 | Implemented `QueryBuilder` class in `src/query-builder.ts` with fluent API for SELECT, INSERT, UPDATE, DELETE queries. Includes SQL injection protection via identifier/string escaping, support for JOINs, WHERE conditions, ORDER BY, LIMIT/OFFSET, GROUP BY/HAVING, and parameterized queries for prepared statements. Added 80 unit tests. Also added performance benchmarks in `benchmarks/` directory covering proto encoding, query builder, and retry logic throughput (e.g., 5M+ ops/s for simple escaping, 200K+ ops/s for proto encoding).                                                                                                                                                                                                                                                                                 |
 | 2026-02-11 | Started M8 (Cross-Runtime Compatibility). Created `runtime.ts` with detectRuntime() that identifies Bun/Deno/Node/Browser/Worker environments using global checks (`Bun` in globalThis, `Deno` in globalThis, etc.). Bun is detected before Node.js despite Bun having Node.js compatibility layer. Created `transport.ts` with FlightTransport type defining runtime-agnostic gRPC operations. Created `transport-grpc-js.ts` with GrpcJsTransport class implementing FlightTransport for Node.js/Bun using @grpc/grpc-js. Added conditional exports in package.json for runtime-specific paths. CI matrix now tests Bun 1.0/1.1/latest and Node 20/22. Bundle analysis script verifies no Node-specific imports leak into universal modules. Deno and browser transports deferred—require grpc-web or native HTTP/2 implementation. |
+| 2026-02-11 | Refactored `client.ts` to use FlightTransport abstraction. Removed direct `@grpc/grpc-js` imports—client now uses transport interface for all gRPC operations. Transport is auto-created via `getTransportForRuntime()` or can be injected via `options.transport`. Error handling unified via `wrapTransportError()` that handles gRPC status codes without importing grpc module. This enables future browser/Deno support by swapping transport implementations.                                                                                                                                                                                                                                                                                                                                                                   |

@@ -5,12 +5,10 @@
  * Modeled after the official Arrow Flight SQL clients (Java, C++, Go).
  */
 
-import * as grpc from "@grpc/grpc-js"
 import { type RecordBatch, RecordBatchReader, type Schema, type Table } from "apache-arrow"
 
 import { collectToTable, parseFlightData, tryParseSchema } from "./arrow"
 import { AuthenticationError, ConnectionError, FlightSqlError } from "./errors"
-import { getFlightServiceDefinition } from "./generated"
 import {
   encodeActionClosePreparedStatementRequest,
   encodeActionCreatePreparedStatementRequest,
@@ -27,6 +25,8 @@ import {
   getBytesField,
   parseProtoFields
 } from "./proto"
+import type { FlightTransport, TransportMetadata } from "./transport"
+import { getTransportForRuntime } from "./transport-grpc-js"
 import {
   type Action,
   type ActionResult,
@@ -85,8 +85,7 @@ export class FlightSqlClient {
   > &
     FlightSqlClientOptions
 
-  private grpcClient: grpc.Client | null = null
-  private flightService: grpc.ServiceClientConstructor | null = null
+  private transport: FlightTransport | null = null
   private authToken: string | null = null
   private connected = false
 
@@ -97,6 +96,11 @@ export class FlightSqlClient {
       port: options.port,
       connectTimeoutMs: options.connectTimeoutMs ?? defaultConnectTimeoutMs,
       requestTimeoutMs: options.requestTimeoutMs ?? defaultRequestTimeoutMs
+    }
+
+    // Use provided transport or create one for the runtime
+    if (options.transport !== undefined) {
+      this.transport = options.transport as FlightTransport
     }
   }
 
@@ -116,30 +120,18 @@ export class FlightSqlClient {
     }
 
     try {
-      // Load the Flight service definition
-      const packageDef = await getFlightServiceDefinition()
-
-      // Navigate to arrow.flight.protocol.FlightService
-      const arrowPackage = packageDef.arrow as grpc.GrpcObject
-      const flightPackage = arrowPackage.flight as grpc.GrpcObject
-      const protocolPackage = flightPackage.protocol as grpc.GrpcObject
-      this.flightService = protocolPackage.FlightService as grpc.ServiceClientConstructor
-
-      // Create channel credentials
-      const credentials: grpc.ChannelCredentials =
-        this.options.credentials ?? this.createCredentials()
-
-      // Create the gRPC client
-      const address = `${this.options.host}:${String(this.options.port)}`
-      this.grpcClient = new this.flightService(address, credentials, {
-        "grpc.max_receive_message_length": -1, // Unlimited
-        "grpc.max_send_message_length": -1,
-        "grpc.keepalive_time_ms": 30_000,
-        "grpc.keepalive_timeout_ms": 10_000
+      // Create transport if not provided
+      this.transport ??= getTransportForRuntime({
+        host: this.options.host,
+        port: this.options.port,
+        tls: this.options.tls,
+        credentials: this.options.credentials,
+        connectTimeoutMs: this.options.connectTimeoutMs,
+        requestTimeoutMs: this.options.requestTimeoutMs
       })
 
-      // Wait for the channel to be ready
-      await this.waitForReady()
+      // Connect the transport
+      await this.transport.connect()
 
       // Perform authentication handshake if configured
       if (this.options.auth && this.options.auth.type !== "none") {
@@ -664,28 +656,22 @@ export class FlightSqlClient {
    * @returns FlightInfo with schema and endpoints
    */
   async getFlightInfo(descriptor: FlightDescriptor): Promise<FlightInfo> {
-    this.ensureConnected()
+    const transport = this.getConnectedTransport()
 
-    return new Promise((resolve, reject) => {
-      const client = this.grpcClient as grpc.Client & {
-        getFlightInfo: (
-          request: unknown,
-          metadata: grpc.Metadata,
-          callback: (error: grpc.ServiceError | null, response: unknown) => void
-        ) => void
-      }
-
+    try {
       const metadata = this.createRequestMetadata()
-      const request = this.serializeFlightDescriptor(descriptor)
-
-      client.getFlightInfo(request, metadata, (error, response) => {
-        if (error) {
-          reject(this.wrapGrpcError(error))
-          return
-        }
-        resolve(this.parseFlightInfo(response))
-      })
-    })
+      const rawInfo = await transport.getFlightInfo(
+        {
+          type: descriptor.type,
+          cmd: descriptor.cmd,
+          path: descriptor.path
+        },
+        metadata
+      )
+      return this.parseFlightInfo(rawInfo)
+    } catch (error) {
+      throw this.wrapTransportError(error as Error)
+    }
   }
 
   /**
@@ -695,28 +681,22 @@ export class FlightSqlClient {
    * @returns Schema result
    */
   async getSchema(descriptor: FlightDescriptor): Promise<SchemaResult> {
-    this.ensureConnected()
+    const transport = this.getConnectedTransport()
 
-    return new Promise((resolve, reject) => {
-      const client = this.grpcClient as grpc.Client & {
-        getSchema: (
-          request: unknown,
-          metadata: grpc.Metadata,
-          callback: (error: grpc.ServiceError | null, response: unknown) => void
-        ) => void
-      }
-
+    try {
       const metadata = this.createRequestMetadata()
-      const request = this.serializeFlightDescriptor(descriptor)
-
-      client.getSchema(request, metadata, (error, response) => {
-        if (error) {
-          reject(this.wrapGrpcError(error))
-          return
-        }
-        resolve(this.parseSchemaResult(response))
-      })
-    })
+      const rawSchema = await transport.getSchema(
+        {
+          type: descriptor.type,
+          cmd: descriptor.cmd,
+          path: descriptor.path
+        },
+        metadata
+      )
+      return this.parseSchemaResult(rawSchema)
+    } catch (error) {
+      throw this.wrapTransportError(error as Error)
+    }
   }
 
   /**
@@ -728,22 +708,20 @@ export class FlightSqlClient {
   async *doGet(
     ticket: Ticket
   ): AsyncGenerator<{ dataHeader?: Uint8Array; dataBody?: Uint8Array }, void, unknown> {
-    this.ensureConnected()
-
-    const client = this.grpcClient as grpc.Client & {
-      doGet: (request: unknown, metadata: grpc.Metadata) => grpc.ClientReadableStream<unknown>
-    }
+    const transport = this.getConnectedTransport()
 
     const metadata = this.createRequestMetadata()
-    const request = { ticket: ticket.ticket }
-
-    const stream = client.doGet(request, metadata)
+    const stream = transport.doGet({ ticket: ticket.ticket }, metadata)
 
     try {
-      for await (const data of this.wrapStream(stream)) {
-        const flightData = data as { dataBody?: Uint8Array; dataHeader?: Uint8Array }
-        yield flightData
+      for await (const data of stream) {
+        yield {
+          dataHeader: data.dataHeader,
+          dataBody: data.dataBody
+        }
       }
+    } catch (error) {
+      throw this.wrapTransportError(error as Error)
     } finally {
       stream.cancel()
     }
@@ -764,22 +742,12 @@ export class FlightSqlClient {
       appMetadata?: Uint8Array
     }>
   ): AsyncGenerator<{ appMetadata?: Uint8Array }, void, unknown> {
-    this.ensureConnected()
-
-    const client = this.grpcClient as grpc.Client & {
-      doPut: (metadata: grpc.Metadata) => grpc.ClientDuplexStream<unknown, unknown>
-    }
+    const transport = this.getConnectedTransport()
 
     const requestMetadata = this.createRequestMetadata()
 
     // Create bidirectional stream
-    const stream = client.doPut(requestMetadata)
-
-    // Use object wrapper to track errors (allows TypeScript to understand mutation)
-    const errorState = { error: null as Error | null }
-    stream.on("error", (err: Error) => {
-      errorState.error = err
-    })
+    const stream = transport.doPut(requestMetadata)
 
     // Send the first message with the descriptor
     const firstData = await this.getFirstFromIterable(dataStream)
@@ -794,10 +762,6 @@ export class FlightSqlClient {
 
     // Send remaining data
     for await (const data of dataStream) {
-      if (errorState.error) {
-        throw this.wrapGrpcError(errorState.error as grpc.ServiceError)
-      }
-
       stream.write({
         dataHeader: data.dataHeader,
         dataBody: data.dataBody,
@@ -810,15 +774,11 @@ export class FlightSqlClient {
 
     // Read responses
     try {
-      for await (const result of this.wrapStream(stream)) {
-        const putResult = result as { appMetadata?: Uint8Array }
-        yield { appMetadata: putResult.appMetadata }
+      for await (const result of stream) {
+        yield { appMetadata: result.appMetadata }
       }
     } catch (error) {
-      if (errorState.error) {
-        throw this.wrapGrpcError(errorState.error as grpc.ServiceError)
-      }
-      throw error
+      throw this.wrapTransportError(error as Error)
     }
   }
 
@@ -853,34 +813,18 @@ export class FlightSqlClient {
    * ```
    */
   doExchange(descriptor: FlightDescriptor): ExchangeStream {
-    this.ensureConnected()
-
-    const client = this.grpcClient as grpc.Client & {
-      doExchange: (metadata: grpc.Metadata) => grpc.ClientDuplexStream<unknown, unknown>
-    }
+    const transport = this.getConnectedTransport()
 
     const metadata = this.createRequestMetadata()
-    const stream = client.doExchange(metadata)
-
-    // Use object wrapper to track errors
-    const errorState = { error: null as Error | null }
-    stream.on("error", (err: Error) => {
-      errorState.error = err
-    })
+    const stream = transport.doExchange(metadata)
 
     // Capture references for closure
-    const wrapGrpcError = this.wrapGrpcError.bind(this)
+    const wrapTransportError = this.wrapTransportError.bind(this)
     const serializeFlightDescriptor = this.serializeFlightDescriptor.bind(this)
-    const wrapStream = this.wrapStream.bind(this) as (
-      s: grpc.ClientReadableStream<unknown>
-    ) => AsyncGenerator<unknown, void, unknown>
 
     // Create the exchange handle
     const exchange: ExchangeStream = {
       async send(data: FlightData): Promise<void> {
-        if (errorState.error) {
-          throw wrapGrpcError(errorState.error as grpc.ServiceError)
-        }
         stream.write({
           flightDescriptor: data.flightDescriptor
             ? serializeFlightDescriptor(data.flightDescriptor)
@@ -903,31 +847,22 @@ export class FlightSqlClient {
 
       async *[Symbol.asyncIterator](): AsyncGenerator<FlightData, void, unknown> {
         try {
-          for await (const data of wrapStream(stream)) {
-            const flightData = data as {
-              flightDescriptor?: { type: number; cmd?: Uint8Array; path?: string[] }
-              dataHeader?: Uint8Array
-              dataBody?: Uint8Array
-              appMetadata?: Uint8Array
-            }
+          for await (const data of stream) {
             yield {
-              flightDescriptor: flightData.flightDescriptor
+              flightDescriptor: data.flightDescriptor
                 ? {
-                    type: flightData.flightDescriptor.type as DescriptorType,
-                    cmd: flightData.flightDescriptor.cmd,
-                    path: flightData.flightDescriptor.path
+                    type: data.flightDescriptor.type as DescriptorType,
+                    cmd: data.flightDescriptor.cmd,
+                    path: data.flightDescriptor.path
                   }
                 : undefined,
-              dataHeader: flightData.dataHeader ?? new Uint8Array(),
-              dataBody: flightData.dataBody ?? new Uint8Array(),
-              appMetadata: flightData.appMetadata
+              dataHeader: data.dataHeader ?? new Uint8Array(),
+              dataBody: data.dataBody ?? new Uint8Array(),
+              appMetadata: data.appMetadata
             }
           }
         } catch (error) {
-          if (errorState.error) {
-            throw wrapGrpcError(errorState.error as grpc.ServiceError)
-          }
-          throw error
+          throw wrapTransportError(error as Error)
         }
       }
     }
@@ -991,21 +926,17 @@ export class FlightSqlClient {
    * @returns Async iterator of results
    */
   async *doAction(action: Action): AsyncGenerator<ActionResult, void, unknown> {
-    this.ensureConnected()
-
-    const client = this.grpcClient as grpc.Client & {
-      doAction: (request: unknown, metadata: grpc.Metadata) => grpc.ClientReadableStream<unknown>
-    }
+    const transport = this.getConnectedTransport()
 
     const metadata = this.createRequestMetadata()
-    const request = { type: action.type, body: action.body }
-
-    const stream = client.doAction(request, metadata)
+    const stream = transport.doAction({ type: action.type, body: action.body }, metadata)
 
     try {
-      for await (const result of this.wrapStream(stream)) {
-        yield result as ActionResult
+      for await (const result of stream) {
+        yield { body: result.body ?? new Uint8Array() }
       }
+    } catch (error) {
+      throw this.wrapTransportError(error as Error)
     } finally {
       stream.cancel()
     }
@@ -1017,18 +948,21 @@ export class FlightSqlClient {
    * @returns Array of available action types
    */
   async listActions(): Promise<ActionType[]> {
-    this.ensureConnected()
-
-    const client = this.grpcClient as grpc.Client & {
-      listActions: (request: unknown, metadata: grpc.Metadata) => grpc.ClientReadableStream<unknown>
-    }
+    const transport = this.getConnectedTransport()
 
     const metadata = this.createRequestMetadata()
-    const stream = client.listActions({}, metadata)
+    const stream = transport.listActions(metadata)
 
     const actions: ActionType[] = []
-    for await (const action of this.wrapStream(stream)) {
-      actions.push(action as ActionType)
+    try {
+      for await (const action of stream) {
+        actions.push({
+          type: action.type,
+          description: action.description ?? ""
+        })
+      }
+    } catch (error) {
+      throw this.wrapTransportError(error as Error)
     }
 
     return actions
@@ -1063,39 +997,37 @@ export class FlightSqlClient {
   }
 
   private async handshake(username: string, password: string): Promise<HandshakeResult> {
-    return new Promise((resolve, reject) => {
-      const client = this.grpcClient as grpc.Client & {
-        handshake: () => grpc.ClientDuplexStream<unknown, unknown>
-      }
+    // Note: Called during connect(), so transport exists but connected flag isn't set yet
+    if (this.transport === null) {
+      throw new ConnectionError("Transport not initialized")
+    }
+    const stream = this.transport.handshake()
 
-      const stream = client.handshake()
+    // Build BasicAuth payload
+    const authPayload = this.encodeBasicAuth(username, password)
 
-      // Build BasicAuth payload
-      const authPayload = this.encodeBasicAuth(username, password)
-
-      stream.on("data", (response: { protocolVersion?: string; payload?: Uint8Array }) => {
-        resolve({
-          protocolVersion: BigInt(response.protocolVersion ?? "0"),
-          payload: response.payload ?? new Uint8Array()
-        })
-      })
-
-      stream.on("error", (error: Error) => {
-        reject(new AuthenticationError("Handshake failed", { cause: error }))
-      })
-
-      stream.on("end", () => {
-        // Stream ended without response
-      })
-
-      // Send handshake request
-      stream.write({
-        protocolVersion: "1",
-        payload: authPayload
-      })
-
-      stream.end()
+    // Send handshake request
+    stream.write({
+      protocolVersion: 1,
+      payload: authPayload
     })
+    stream.end()
+
+    // Read response
+    try {
+      for await (const response of stream) {
+        return {
+          protocolVersion: BigInt(response.protocolVersion ?? 0),
+          payload: response.payload ?? new Uint8Array()
+        }
+      }
+      throw new AuthenticationError("Handshake failed: no response received")
+    } catch (error) {
+      if (error instanceof AuthenticationError) {
+        throw error
+      }
+      throw new AuthenticationError("Handshake failed", { cause: error })
+    }
   }
 
   private encodeBasicAuth(username: string, password: string): Uint8Array {
@@ -1106,47 +1038,21 @@ export class FlightSqlClient {
   }
 
   // ===========================================================================
-  // Private: gRPC Helpers
+  // Private: Transport Helpers
   // ===========================================================================
 
-  private createCredentials(): grpc.ChannelCredentials {
-    if (this.options.tls) {
-      return grpc.credentials.createSsl()
-    }
-    return grpc.credentials.createInsecure()
-  }
-
-  private async waitForReady(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const deadline = Date.now() + this.options.connectTimeoutMs
-      const client = this.grpcClient
-      if (!client) {
-        reject(new ConnectionError("gRPC client not initialized"))
-        return
-      }
-
-      client.waitForReady(deadline, (error) => {
-        if (error) {
-          reject(new ConnectionError("Connection timeout", { cause: error }))
-        } else {
-          resolve()
-        }
-      })
-    })
-  }
-
-  private createRequestMetadata(): grpc.Metadata {
-    const metadata = new grpc.Metadata()
+  private createRequestMetadata(): TransportMetadata {
+    const metadata: TransportMetadata = {}
 
     // Add auth token if present
     if (this.authToken !== null && this.authToken !== "") {
-      metadata.set("authorization", `Bearer ${this.authToken}`)
+      metadata.authorization = `Bearer ${this.authToken}`
     }
 
     // Add custom metadata from options
     if (this.options.metadata) {
       for (const [key, value] of Object.entries(this.options.metadata)) {
-        metadata.set(key, value)
+        metadata[key] = value
       }
     }
 
@@ -1154,73 +1060,61 @@ export class FlightSqlClient {
   }
 
   private cleanup(): void {
-    if (this.grpcClient) {
-      this.grpcClient.close()
-      this.grpcClient = null
+    if (this.transport) {
+      this.transport.close()
+      this.transport = null
     }
-    this.flightService = null
     this.authToken = null
     this.connected = false
   }
 
   private ensureConnected(): void {
-    if (!this.connected) {
+    if (!this.connected || this.transport === null) {
       throw new ConnectionError("Client is not connected. Call connect() first.")
     }
   }
 
-  private wrapGrpcError(error: grpc.ServiceError): FlightSqlError {
-    const message = error.details || error.message
-
-    switch (error.code) {
-      case grpc.status.UNAUTHENTICATED:
-        return new AuthenticationError(message, { cause: error })
-      case grpc.status.UNAVAILABLE:
-      case grpc.status.DEADLINE_EXCEEDED:
-        return new ConnectionError(message, { cause: error })
-      case grpc.status.OK:
-      case grpc.status.CANCELLED:
-      case grpc.status.UNKNOWN:
-      case grpc.status.INVALID_ARGUMENT:
-      case grpc.status.NOT_FOUND:
-      case grpc.status.ALREADY_EXISTS:
-      case grpc.status.PERMISSION_DENIED:
-      case grpc.status.RESOURCE_EXHAUSTED:
-      case grpc.status.FAILED_PRECONDITION:
-      case grpc.status.ABORTED:
-      case grpc.status.OUT_OF_RANGE:
-      case grpc.status.UNIMPLEMENTED:
-      case grpc.status.INTERNAL:
-      case grpc.status.DATA_LOSS:
-        return new FlightSqlError(message, { cause: error })
+  /**
+   * Get the transport, throwing if not connected.
+   * This is a helper to avoid non-null assertions after ensureConnected().
+   */
+  private getConnectedTransport(): FlightTransport {
+    if (!this.connected || this.transport === null) {
+      throw new ConnectionError("Client is not connected. Call connect() first.")
     }
+    return this.transport
   }
 
-  // ===========================================================================
-  // Private: Streaming Helpers
-  // ===========================================================================
+  private wrapTransportError(error: Error): FlightSqlError {
+    // Handle TransportError with gRPC status codes
+    const transportError = error as { code?: number; details?: string }
+    const message = transportError.details ?? error.message
 
-  /**
-   * Wraps a gRPC stream to convert errors to FlightSqlError types.
-   * gRPC streams are already async iterable, so we just need error handling.
-   */
-  private async *wrapStream<T>(
-    stream: grpc.ClientReadableStream<T>
-  ): AsyncGenerator<T, void, unknown> {
-    try {
-      for await (const data of stream) {
-        yield data
+    if (transportError.code !== undefined) {
+      // gRPC status codes
+      switch (transportError.code) {
+        case 16: // UNAUTHENTICATED
+          return new AuthenticationError(message, { cause: error })
+        case 14: // UNAVAILABLE
+        case 4: // DEADLINE_EXCEEDED
+          return new ConnectionError(message, { cause: error })
+        default:
+          return new FlightSqlError(message, { cause: error })
       }
-    } catch (error) {
-      throw this.wrapGrpcError(error as grpc.ServiceError)
     }
+
+    return new FlightSqlError(message, { cause: error })
   }
 
   // ===========================================================================
   // Private: Serialization Helpers
   // ===========================================================================
 
-  private serializeFlightDescriptor(descriptor: FlightDescriptor): Record<string, unknown> {
+  private serializeFlightDescriptor(descriptor: FlightDescriptor): {
+    type: number
+    cmd?: Uint8Array
+    path?: string[]
+  } {
     return {
       type: descriptor.type,
       cmd: descriptor.cmd,
