@@ -81,7 +81,11 @@ jobs:
       - name: Build
         run: bun run build
       - name: Verify module loads in Node.js
-        run: node -e "import('./dist/index.js').then(m => { console.log('Module loaded successfully'); console.log('Exports:', Object.keys(m).length); if (!m.FlightSqlClient) throw new Error('FlightSqlClient not exported'); if (!m.detectRuntime) throw new Error('detectRuntime not exported'); console.log('Runtime:', m.detectRuntime()); })"
+        run:
+          node -e "import('./dist/index.js').then(m => { console.log('Module loaded successfully');
+          console.log('Exports:', Object.keys(m).length); if (!m.FlightSqlClient) throw new
+          Error('FlightSqlClient not exported'); if (!m.detectRuntime) throw new
+          Error('detectRuntime not exported'); console.log('Runtime:', m.detectRuntime()); })"
       - name: Report Node.js version
         run: node --version
 

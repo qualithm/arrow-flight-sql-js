@@ -56,16 +56,16 @@ describe("NoopMetricsHandler", () => {
 // ============================================================================
 
 describe("ConsoleMetricsHandler", () => {
-  let consoleLogSpy: Mock<typeof console.log>
+  let consoleWarnSpy: Mock<typeof console.warn>
   let consoleErrorSpy: Mock<typeof console.error>
 
   beforeEach(() => {
-    consoleLogSpy = spyOn(console, "log").mockImplementation(() => undefined)
+    consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => undefined)
     consoleErrorSpy = spyOn(console, "error").mockImplementation(() => undefined)
   })
 
   afterEach(() => {
-    consoleLogSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
     consoleErrorSpy.mockRestore()
   })
 
@@ -73,17 +73,17 @@ describe("ConsoleMetricsHandler", () => {
     const handler = new ConsoleMetricsHandler()
     handler.recordGauge({ name: "test", value: 1 })
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("[FlightSQL Metrics]"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("[FlightSQL Metrics]"))
   })
 
   test("should use custom prefix", () => {
     const handler = new ConsoleMetricsHandler("[Custom]")
     handler.recordGauge({ name: "test", value: 1 })
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("[Custom]"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("[Custom]"))
   })
 
-  test("should log successful operations to console.log", () => {
+  test("should log successful operations to console.warn", () => {
     const handler = new ConsoleMetricsHandler()
     handler.recordOperation({
       operation: "query",
@@ -93,11 +93,11 @@ describe("ConsoleMetricsHandler", () => {
       endTime: Date.now()
     })
 
-    expect(consoleLogSpy).toHaveBeenCalledTimes(1)
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("query"))
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("success"))
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("150ms"))
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("✓"))
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1)
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("query"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("success"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("150ms"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("✓"))
   })
 
   test("should log failed operations to console.error", () => {
@@ -128,9 +128,9 @@ describe("ConsoleMetricsHandler", () => {
       labels: { host: "localhost" }
     })
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("[gauge]"))
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("pool_size=5"))
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("localhost"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("[gauge]"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("pool_size=5"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("localhost"))
   })
 
   test("should log counter increments", () => {
@@ -140,8 +140,8 @@ describe("ConsoleMetricsHandler", () => {
       increment: 1
     })
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("[counter]"))
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("queries_total+=1"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("[counter]"))
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("queries_total+=1"))
   })
 })
 
