@@ -6,12 +6,15 @@ import { describe, expect, test } from "bun:test"
 
 import {
   encodeCommandGetCatalogs,
+  encodeCommandGetCrossReference,
   encodeCommandGetDbSchemas,
   encodeCommandGetExportedKeys,
   encodeCommandGetImportedKeys,
   encodeCommandGetPrimaryKeys,
+  encodeCommandGetSqlInfo,
   encodeCommandGetTables,
   encodeCommandGetTableTypes,
+  encodeCommandGetXdbcTypeInfo,
   encodeCommandStatementQuery,
   encodeCommandStatementUpdate,
   getBytesField,
@@ -37,6 +40,9 @@ describe("TypeUrls", () => {
     expect(TypeUrls.commandGetPrimaryKeys).toBeDefined()
     expect(TypeUrls.commandGetExportedKeys).toBeDefined()
     expect(TypeUrls.commandGetImportedKeys).toBeDefined()
+    expect(TypeUrls.commandGetSqlInfo).toBeDefined()
+    expect(TypeUrls.commandGetXdbcTypeInfo).toBeDefined()
+    expect(TypeUrls.commandGetCrossReference).toBeDefined()
   })
 })
 
@@ -201,6 +207,137 @@ describe("encodeCommandGetImportedKeys", () => {
     expect(encoded).toBeInstanceOf(Uint8Array)
     const decoded = parseAnyMessage(encoded)
     expect(decoded.typeUrl).toBe(TypeUrls.commandGetImportedKeys)
+  })
+})
+
+describe("encodeCommandGetSqlInfo", () => {
+  test("should encode empty message for all info", () => {
+    const encoded = encodeCommandGetSqlInfo()
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetSqlInfo)
+    expect(decoded.value.length).toBe(0) // Empty message retrieves all info
+  })
+
+  test("should encode with empty array for all info", () => {
+    const encoded = encodeCommandGetSqlInfo([])
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetSqlInfo)
+    expect(decoded.value.length).toBe(0)
+  })
+
+  test("should encode with single info code", () => {
+    const encoded = encodeCommandGetSqlInfo([0]) // FLIGHT_SQL_SERVER_NAME
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetSqlInfo)
+    expect(decoded.value.length).toBeGreaterThan(0)
+  })
+
+  test("should encode with multiple info codes", () => {
+    const encoded = encodeCommandGetSqlInfo([0, 1, 2]) // Server name, version, arrow version
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetSqlInfo)
+    // Multiple varints should make the message larger than single
+    const singleEncoded = encodeCommandGetSqlInfo([0])
+    expect(encoded.length).toBeGreaterThan(singleEncoded.length)
+  })
+})
+
+describe("encodeCommandGetXdbcTypeInfo", () => {
+  test("should encode empty message for all types", () => {
+    const encoded = encodeCommandGetXdbcTypeInfo()
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetXdbcTypeInfo)
+    expect(decoded.value.length).toBe(0) // Empty message retrieves all types
+  })
+
+  test("should encode with specific data type", () => {
+    const encoded = encodeCommandGetXdbcTypeInfo(12) // VARCHAR
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetXdbcTypeInfo)
+    expect(decoded.value.length).toBeGreaterThan(0)
+  })
+
+  test("should encode data type as varint", () => {
+    const encoded = encodeCommandGetXdbcTypeInfo(4) // INTEGER
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    const fields = parseProtoFields(decoded.value)
+    expect(fields.length).toBe(1)
+    expect(fields[0].fieldNumber).toBe(1)
+    expect(fields[0].wireType).toBe(0) // varint
+    expect(fields[0].value).toBe(4)
+  })
+})
+
+describe("encodeCommandGetCrossReference", () => {
+  test("should encode with required pk and fk tables", () => {
+    const encoded = encodeCommandGetCrossReference({
+      pkTable: "users",
+      fkTable: "orders"
+    })
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetCrossReference)
+    expect(decoded.value.length).toBeGreaterThan(0)
+  })
+
+  test("should encode with all options", () => {
+    const encoded = encodeCommandGetCrossReference({
+      pkTable: "users",
+      fkTable: "orders",
+      pkCatalog: "main",
+      pkDbSchema: "public",
+      fkCatalog: "main",
+      fkDbSchema: "public"
+    })
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    // Should be larger than minimal message
+    const minimalEncoded = encodeCommandGetCrossReference({
+      pkTable: "users",
+      fkTable: "orders"
+    })
+    expect(encoded.length).toBeGreaterThan(minimalEncoded.length)
+  })
+
+  test("should encode with only pk catalog and schema", () => {
+    const encoded = encodeCommandGetCrossReference({
+      pkTable: "users",
+      fkTable: "orders",
+      pkCatalog: "main",
+      pkDbSchema: "public"
+    })
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetCrossReference)
+  })
+
+  test("should encode with only fk catalog and schema", () => {
+    const encoded = encodeCommandGetCrossReference({
+      pkTable: "users",
+      fkTable: "orders",
+      fkCatalog: "main",
+      fkDbSchema: "public"
+    })
+
+    expect(encoded).toBeInstanceOf(Uint8Array)
+    const decoded = parseAnyMessage(encoded)
+    expect(decoded.typeUrl).toBe(TypeUrls.commandGetCrossReference)
   })
 })
 

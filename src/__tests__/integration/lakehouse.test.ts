@@ -235,6 +235,90 @@ describe("Lakehouse Integration", () => {
       expect(Array.isArray(types)).toBe(true)
       // Common types include TABLE, VIEW
     })
+
+    test("should get SQL info", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      // Get all SQL info
+      const allInfo = await client.getSqlInfo()
+
+      expect(Array.isArray(allInfo)).toBe(true)
+    })
+
+    test("should get specific SQL info codes", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      // Request specific info codes: server name (0), version (1), arrow version (2)
+      const info = await client.getSqlInfo([0, 1, 2])
+
+      expect(Array.isArray(info)).toBe(true)
+    })
+
+    test("should get XDBC type info", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      // Get all type info - may throw UNIMPLEMENTED if server doesn't support
+      try {
+        const types = await client.getXdbcTypeInfo()
+        expect(Array.isArray(types)).toBe(true)
+      } catch (error) {
+        // Server may not implement this Flight SQL command
+        const message = (error as Error).message || ""
+        if (message.includes("UNIMPLEMENTED") || message.includes("no default implementation")) {
+          console.warn("  [SKIP] Server does not implement getXdbcTypeInfo")
+          return
+        }
+        throw error
+      }
+    })
+
+    test("should get specific XDBC type info", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      // Get info for INTEGER type (4) - may throw UNIMPLEMENTED
+      try {
+        const types = await client.getXdbcTypeInfo(4)
+        expect(Array.isArray(types)).toBe(true)
+      } catch (error) {
+        const message = (error as Error).message || ""
+        if (message.includes("UNIMPLEMENTED") || message.includes("no default implementation")) {
+          console.warn("  [SKIP] Server does not implement getXdbcTypeInfo")
+          return
+        }
+        throw error
+      }
+    })
+
+    test("should get cross reference between tables", async () => {
+      if (skipIfNoIntegration()) {
+        return
+      }
+
+      // This test may return empty results if no FK relationships exist
+      // or throw UNIMPLEMENTED if server doesn't support the command
+      try {
+        const refs = await client.getCrossReference({
+          pkTable: "users",
+          fkTable: "orders"
+        })
+        expect(Array.isArray(refs)).toBe(true)
+      } catch (error) {
+        const message = (error as Error).message || ""
+        if (message.includes("UNIMPLEMENTED") || message.includes("no default implementation")) {
+          console.warn("  [SKIP] Server does not implement getCrossReference")
+          return
+        }
+        throw error
+      }
+    })
   })
 
   // ==========================================================================

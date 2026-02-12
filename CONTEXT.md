@@ -42,8 +42,8 @@ consumer).
 
 ### Tests
 
-Unit: 281 tests (errors: 27, retry: 31, proto: 32, metrics: 38, subscription: 26, query-builder: 80,
-runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 24 pass
+Unit: 292 tests (errors: 27, retry: 31, proto: 43, metrics: 38, subscription: 26, query-builder: 80,
+runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 29 pass
 
 ### Dependencies
 
