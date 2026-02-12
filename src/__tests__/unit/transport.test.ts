@@ -30,15 +30,19 @@ describe("Transport Registry", () => {
   test("getTransportFactory should return factory for registered runtime", () => {
     const nodeFactory = getTransportFactory(Runtime.Node)
     const bunFactory = getTransportFactory(Runtime.Bun)
+    const browserFactory = getTransportFactory(Runtime.Browser)
+    const denoFactory = getTransportFactory(Runtime.Deno)
 
     expect(nodeFactory).toBeDefined()
     expect(bunFactory).toBeDefined()
+    expect(browserFactory).toBeDefined()
+    expect(denoFactory).toBeDefined()
   })
 
   test("getTransportFactory should return undefined for unregistered runtime", () => {
-    const browserFactory = getTransportFactory(Runtime.Browser)
+    const unknownFactory = getTransportFactory(Runtime.Unknown)
 
-    expect(browserFactory).toBeUndefined()
+    expect(unknownFactory).toBeUndefined()
   })
 
   test("registerTransport should add new factory", () => {

@@ -25,24 +25,25 @@ consumer).
 
 ### Core Modules
 
-| Module                 | Purpose                                    |
-| ---------------------- | ------------------------------------------ |
-| `client.ts`            | FlightSqlClient, QueryResult, Subscription |
-| `pool.ts`              | Connection pooling with health checks      |
-| `retry.ts`             | Exponential backoff with jitter            |
-| `metrics.ts`           | Pluggable observability handlers           |
-| `proto.ts`             | Manual protobuf encoding/decoding          |
-| `arrow.ts`             | Arrow IPC parsing utilities                |
-| `errors.ts`            | Custom errors with gRPC status mapping     |
-| `query-builder.ts`     | Fluent SQL query builder                   |
-| `runtime.ts`           | Runtime detection (Node/Bun/Deno/Browser)  |
-| `transport.ts`         | Transport abstraction interface            |
-| `transport-grpc-js.ts` | gRPC-JS transport for Node.js/Bun          |
+| Module                  | Purpose                                     |
+| ----------------------- | ------------------------------------------- |
+| `client.ts`             | FlightSqlClient, QueryResult, Subscription  |
+| `pool.ts`               | Connection pooling with health checks       |
+| `retry.ts`              | Exponential backoff with jitter             |
+| `metrics.ts`            | Pluggable observability handlers            |
+| `proto.ts`              | Manual protobuf encoding/decoding           |
+| `arrow.ts`              | Arrow IPC parsing utilities                 |
+| `errors.ts`             | Custom errors with gRPC status mapping      |
+| `query-builder.ts`      | Fluent SQL query builder                    |
+| `runtime.ts`            | Runtime detection (Node/Bun/Deno/Browser)   |
+| `transport.ts`          | Transport abstraction interface             |
+| `transport-grpc-js.ts`  | gRPC-JS transport for Node.js/Bun           |
+| `transport-grpc-web.ts` | gRPC-Web transport for Browser/Deno/Workers |
 
 ### Tests
 
-Unit: 269 tests (errors: 27, retry: 31, proto: 32, metrics: 38, subscription: 26, query-builder: 80,
-runtime: 20, transport: 15) Integration: 24 pass
+Unit: 281 tests (errors: 27, retry: 31, proto: 32, metrics: 38, subscription: 26, query-builder: 80,
+runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 24 pass
 
 ### Dependencies
 
@@ -111,20 +112,7 @@ runtime: 20, transport: 15) Integration: 24 pass
 | M6  | npm Publish     | Integration tests, npm config, TypeDoc, GitHub Pages          |
 | M7  | Subscriptions   | DoExchange, subscribe() API, heartbeats, reconnection         |
 | M8  | Cross-Runtime   | Transport abstraction, runtime detection, Bun/Node CI matrix  |
-
-### M9: Deno & Browser Support (Planned)
-
-Extend cross-runtime support to Deno and browsers via gRPC-web.
-
-**Tasks:**
-
-- [ ] gRPC-web transport implementation (`transport-grpc-web.ts`)
-- [ ] Deno gRPC transport (native HTTP/2 or grpc-web)
-- [ ] Browser integration tests (Playwright or similar)
-- [ ] Deno test runner integration in CI
-- [ ] Documentation for browser/Deno usage
-
-**Acceptance:** `deno test`, browser tests pass; gRPC-web proxy documented.
+| M9  | Browser & Deno  | gRPC-web transport, Playwright tests, Deno CI, documentation  |
 
 ---
 
@@ -154,3 +142,4 @@ Extend cross-runtime support to Deno and browsers via gRPC-web.
 | 2026-02-11 | Started M8 (Cross-Runtime Compatibility). Created `runtime.ts` with detectRuntime() that identifies Bun/Deno/Node/Browser/Worker environments using global checks (`Bun` in globalThis, `Deno` in globalThis, etc.). Bun is detected before Node.js despite Bun having Node.js compatibility layer. Created `transport.ts` with FlightTransport type defining runtime-agnostic gRPC operations. Created `transport-grpc-js.ts` with GrpcJsTransport class implementing FlightTransport for Node.js/Bun using @grpc/grpc-js. Added conditional exports in package.json for runtime-specific paths. CI matrix now tests Bun 1.0/1.1/latest and Node 20/22. Bundle analysis script verifies no Node-specific imports leak into universal modules. Deno and browser transports deferred—require grpc-web or native HTTP/2 implementation. |
 | 2026-02-11 | Refactored `client.ts` to use FlightTransport abstraction. Removed direct `@grpc/grpc-js` imports—client now uses transport interface for all gRPC operations. Transport is auto-created via `getTransportForRuntime()` or can be injected via `options.transport`. Error handling unified via `wrapTransportError()` that handles gRPC status codes without importing grpc module. This enables future browser/Deno support by swapping transport implementations.                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-02-11 | Fixed prepared statements. Server was storing raw SQL in handle, but client was misinterpreting the ActionCreatePreparedStatementResult body which is wrapped in protobuf Any. Added `unwrapAny()` helper in proto.ts to extract inner message. Also implemented `get_flight_info_prepared_statement` and `do_get_prepared_statement` methods in lakehouse server (sql.rs). All 24 integration tests now pass.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-02-12 | Completed M9 (Browser & Deno Support). Created `transport-grpc-web.ts` with manual protobuf encoding/decoding for gRPC-web protocol (no additional dependencies). Implemented 5-byte message framing, trailer parsing, and fetch-based unary/server-streaming calls. Registered for Browser and Deno runtimes (both use fetch API). Bidirectional streaming (DoPut, DoExchange, Handshake) throws clear errors—gRPC-web spec doesn't support client streaming. Added 12 unit tests and Playwright-based browser integration tests. CI now includes Deno test job. README updated with gRPC-web proxy documentation (Envoy example).                                                                                                                                                                                                   |

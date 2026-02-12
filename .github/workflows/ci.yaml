@@ -111,22 +111,46 @@ jobs:
       - name: Report Node.js version
         run: node --version
 
-  # Deno support is planned for M8 but requires additional transport work
-  # test-deno:
-  #   name: Test (Deno ${{ matrix.deno-version }})
+  test-deno:
+    name: Test (Deno)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build
+        run: bun run build
+      - name: Verify module loads in Deno
+        run: |
+          deno eval "
+            import { createGrpcWebTransport, GrpcWebTransport, detectRuntime } from './dist/index.js';
+            console.log('Module loaded successfully');
+            console.log('Runtime:', detectRuntime());
+            const transport = createGrpcWebTransport({ host: 'localhost', port: 50051, tls: false });
+            console.log('Transport created:', transport instanceof GrpcWebTransport);
+            if (!(transport instanceof GrpcWebTransport)) throw new Error('Transport is not GrpcWebTransport');
+          "
+      - name: Report Deno version
+        run: deno --version
+
+  # Browser tests require Playwright and a gRPC-web proxy
+  # test-browser:
+  #   name: Test (Browser)
   #   runs-on: ubuntu-24.04
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       deno-version: ["1.40", "1.41", "latest"]
   #   steps:
   #     - uses: actions/checkout@v5
-  #     - uses: denoland/setup-deno@v1
-  #       with:
-  #         deno-version: ${{ matrix.deno-version }}
-  #     - run: deno test
-  #     - name: Report Deno version
-  #       run: deno --version
+  #     - uses: oven-sh/setup-bun@v2
+  #     - run: bun install --frozen-lockfile
+  #     - run: bun run build
+  #     - run: bunx playwright install --with-deps chromium
+  #     - run: bun test:browser
 
   audit:
     name: Dependency Audit

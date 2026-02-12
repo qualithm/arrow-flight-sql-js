@@ -208,3 +208,6 @@ export { getRegisteredRuntimes, getTransportFactory, registerTransport } from ".
 
 // gRPC-JS transport (Node.js/Bun)
 export { createGrpcJsTransport, getTransportForRuntime, GrpcJsTransport } from "./transport-grpc-js"
+
+// gRPC-Web transport (Browser/Workers)
+export { createGrpcWebTransport, getWebTransport, GrpcWebTransport } from "./transport-grpc-web"

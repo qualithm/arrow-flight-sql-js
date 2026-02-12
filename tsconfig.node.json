@@ -18,5 +18,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["eslint*.config.ts", "src", "scripts", "benchmarks"]
+  "include": ["eslint*.config.ts", "playwright.config.ts", "src", "scripts", "benchmarks"]
 }

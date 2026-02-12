@@ -46,6 +46,11 @@
       "node": "./dist/transport-grpc-js.js",
       "import": "./dist/transport-grpc-js.js",
       "types": "./dist/transport-grpc-js.d.ts"
+    },
+    "./transport/grpc-web": {
+      "browser": "./dist/transport-grpc-web.js",
+      "import": "./dist/transport-grpc-web.js",
+      "types": "./dist/transport-grpc-web.d.ts"
     }
   },
   "files": [
@@ -71,6 +76,8 @@
     "proto:generate": "bun run scripts/generate-proto.ts",
     "start": "bun run src/index.ts",
     "test": "bun test",
+    "test:browser": "bunx playwright test",
+    "test:browser:install": "bunx playwright install chromium",
     "test:coverage": "bun test --coverage",
     "test:integration": "bun test src/__tests__/integration",
     "test:unit": "bun test src/__tests__/unit",
@@ -86,12 +93,14 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
+    "@playwright/test": "^1.58.2",
     "@types/bun": "1.3.7",
     "eslint": "9.39.2",
     "eslint-plugin-simple-import-sort": "12.1.1",
     "eslint-plugin-unused-imports": "4.3.0",
     "globals": "17.2.0",
     "jiti": "2.6.1",
+    "playwright": "^1.58.2",
     "prettier": "3.8.1",
     "typedoc": "0.28.16",
     "typedoc-plugin-markdown": "4.9.0",

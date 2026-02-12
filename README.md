@@ -494,13 +494,100 @@ type AuthConfig =
 
 ### Runtime Support
 
-| Runtime            | Status       | Notes                  |
-| ------------------ | ------------ | ---------------------- |
-| Node.js 20+        | ✅ Supported | Primary target         |
-| Bun                | ✅ Supported | Development runtime    |
-| Deno               | 🔄 Planned   | Via npm compatibility  |
-| Cloudflare Workers | 🔄 Planned   | Requires custom HTTP/2 |
-| Browser            | 🔄 Planned   | Via gRPC-web proxy     |
+| Runtime            | Status       | Transport | Notes                   |
+| ------------------ | ------------ | --------- | ----------------------- |
+| Node.js 20+        | ✅ Supported | gRPC-JS   | Full feature support    |
+| Bun                | ✅ Supported | gRPC-JS   | Development runtime     |
+| Deno               | ✅ Supported | gRPC-Web  | Requires gRPC-web proxy |
+| Browser            | ✅ Supported | gRPC-Web  | Requires gRPC-web proxy |
+| Cloudflare Workers | ✅ Supported | gRPC-Web  | Requires gRPC-web proxy |
+
+### Browser & Deno Usage
+
+Browser and Deno environments use the gRPC-Web transport, which requires a gRPC-Web proxy (like
+[Envoy](https://www.envoyproxy.io/)) in front of your Flight SQL server.
+
+```typescript
+// Browser or Deno
+import { FlightSqlClient, createGrpcWebTransport } from "@qualithm/arrow-flight-sql-js"
+
+// Create a gRPC-Web transport explicitly
+const transport = createGrpcWebTransport({
+  host: "your-grpc-web-proxy.example.com",
+  port: 8080,
+  tls: true
+})
+
+// Create client with custom transport
+const client = new FlightSqlClient({
+  host: "your-grpc-web-proxy.example.com",
+  port: 8080,
+  tls: true,
+  transport
+})
+
+await client.connect()
+const result = await client.query("SELECT * FROM my_table")
+```
+
+**gRPC-Web Limitations:**
+
+- Client streaming (`DoPut`) is not supported
+- Bidirectional streaming (`DoExchange`, `Handshake`) is not supported
+- Use bearer token auth via `setAuthToken()` instead of `Handshake`
+
+**Envoy gRPC-Web Proxy Example:**
+
+```yaml
+# envoy.yaml
+static_resources:
+  listeners:
+    - address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                codec_type: AUTO
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route:
+                            cluster: flight_sql_backend
+                      cors:
+                        allow_origin_string_match:
+                          - prefix: "*"
+                        allow_methods: "GET, PUT, DELETE, POST, OPTIONS"
+                        allow_headers: "content-type,x-grpc-web,x-user-agent"
+                        expose_headers: "grpc-status,grpc-message"
+                http_filters:
+                  - name: envoy.filters.http.grpc_web
+                  - name: envoy.filters.http.cors
+                  - name: envoy.filters.http.router
+  clusters:
+    - name: flight_sql_backend
+      connect_timeout: 0.25s
+      type: LOGICAL_DNS
+      http2_protocol_options: {}
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: flight_sql_backend
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: your-flight-sql-server
+                      port_value: 50051
+```
 
 ### Flight SQL Servers
 
