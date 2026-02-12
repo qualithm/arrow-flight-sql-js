@@ -29,6 +29,8 @@ export const TypeUrls = {
   commandGetExportedKeys: `${typeUrlPrefix}CommandGetExportedKeys`,
   commandGetImportedKeys: `${typeUrlPrefix}CommandGetImportedKeys`,
   commandGetSqlInfo: `${typeUrlPrefix}CommandGetSqlInfo`,
+  commandGetXdbcTypeInfo: `${typeUrlPrefix}CommandGetXdbcTypeInfo`,
+  commandGetCrossReference: `${typeUrlPrefix}CommandGetCrossReference`,
   actionCreatePreparedStatementRequest: `${typeUrlPrefix}ActionCreatePreparedStatementRequest`,
   actionClosePreparedStatementRequest: `${typeUrlPrefix}ActionClosePreparedStatementRequest`
 } as const
@@ -433,6 +435,92 @@ export function encodeCommandGetImportedKeys(
 
   const message = concat(...parts)
   return wrapInAny(TypeUrls.commandGetImportedKeys, message)
+}
+
+/**
+ * Encode CommandGetSqlInfo message
+ *
+ * message CommandGetSqlInfo {
+ *   repeated uint32 info = 1;
+ * }
+ *
+ * If info is empty/undefined, all server info is retrieved.
+ */
+export function encodeCommandGetSqlInfo(info?: number[]): Uint8Array {
+  if (!info || info.length === 0) {
+    // Empty message retrieves all info
+    return wrapInAny(TypeUrls.commandGetSqlInfo, new Uint8Array())
+  }
+
+  const parts: Uint8Array[] = []
+  for (const infoCode of info) {
+    parts.push(concat(encodeTag(1, wireType.varint), encodeVarint(infoCode)))
+  }
+
+  const message = concat(...parts)
+  return wrapInAny(TypeUrls.commandGetSqlInfo, message)
+}
+
+/**
+ * Encode CommandGetXdbcTypeInfo message
+ *
+ * message CommandGetXdbcTypeInfo {
+ *   optional int32 data_type = 1;
+ * }
+ */
+export function encodeCommandGetXdbcTypeInfo(dataType?: number): Uint8Array {
+  if (dataType === undefined) {
+    return wrapInAny(TypeUrls.commandGetXdbcTypeInfo, new Uint8Array())
+  }
+
+  const message = concat(encodeTag(1, wireType.varint), encodeVarint(dataType))
+  return wrapInAny(TypeUrls.commandGetXdbcTypeInfo, message)
+}
+
+/**
+ * Encode CommandGetCrossReference message
+ *
+ * message CommandGetCrossReference {
+ *   optional string pk_catalog = 1;
+ *   optional string pk_db_schema = 2;
+ *   string pk_table = 3;
+ *   optional string fk_catalog = 4;
+ *   optional string fk_db_schema = 5;
+ *   string fk_table = 6;
+ * }
+ */
+export function encodeCommandGetCrossReference(options: {
+  pkTable: string
+  fkTable: string
+  pkCatalog?: string
+  pkDbSchema?: string
+  fkCatalog?: string
+  fkDbSchema?: string
+}): Uint8Array {
+  const parts: Uint8Array[] = []
+
+  if (options.pkCatalog !== undefined) {
+    parts.push(encodeString(1, options.pkCatalog))
+  }
+
+  if (options.pkDbSchema !== undefined) {
+    parts.push(encodeString(2, options.pkDbSchema))
+  }
+
+  parts.push(encodeString(3, options.pkTable))
+
+  if (options.fkCatalog !== undefined) {
+    parts.push(encodeString(4, options.fkCatalog))
+  }
+
+  if (options.fkDbSchema !== undefined) {
+    parts.push(encodeString(5, options.fkDbSchema))
+  }
+
+  parts.push(encodeString(6, options.fkTable))
+
+  const message = concat(...parts)
+  return wrapInAny(TypeUrls.commandGetCrossReference, message)
 }
 
 // ============================================================================

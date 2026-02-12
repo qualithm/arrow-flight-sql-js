@@ -59,12 +59,15 @@ export {
 // Protobuf utilities (for advanced users)
 export {
   encodeCommandGetCatalogs,
+  encodeCommandGetCrossReference,
   encodeCommandGetDbSchemas,
   encodeCommandGetExportedKeys,
   encodeCommandGetImportedKeys,
   encodeCommandGetPrimaryKeys,
+  encodeCommandGetSqlInfo,
   encodeCommandGetTables,
   encodeCommandGetTableTypes,
+  encodeCommandGetXdbcTypeInfo,
   encodeCommandStatementQuery,
   encodeCommandStatementUpdate,
   TypeUrls
@@ -135,6 +138,9 @@ export type {
   RetryOptions,
   SchemaInfo,
   SchemaResult,
+  // SQL Info types
+  SqlInfo,
+  SqlInfoValue,
   // Subscription types
   SubscribeOptions,
   SubscriptionHandle,
@@ -142,7 +148,9 @@ export type {
   TableInfo,
   TableType,
   Ticket,
-  UpdateResult
+  UpdateResult,
+  // XDBC type info
+  XdbcTypeInfo
 } from "./types"
 
 // Re-export DescriptorType and subscription constants (needed for runtime)

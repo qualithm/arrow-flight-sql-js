@@ -318,6 +318,65 @@ export type ForeignKeyInfo = {
   deleteRule: number
 }
 
+/**
+ * SQL Info value types - can be string, boolean, number, string list, or int32 to int32 list map
+ */
+export type SqlInfoValue = string | boolean | bigint | number | string[] | Map<number, number[]>
+
+/**
+ * SQL Info result - server metadata information
+ */
+export type SqlInfo = {
+  /** The info code (see SqlInfo enum in FlightSql.proto) */
+  infoName: number
+  /** The value (type depends on the info code) */
+  value: SqlInfoValue
+}
+
+/**
+ * XDBC Type Info - data type information supported by the server
+ */
+export type XdbcTypeInfo = {
+  /** The name of the data type (e.g., VARCHAR, INTEGER) */
+  typeName: string
+  /** The SQL data type code */
+  dataType: number
+  /** Maximum column size (precision for numeric, length for strings) */
+  columnSize?: number
+  /** Character(s) used to prefix a literal */
+  literalPrefix?: string
+  /** Character(s) used to terminate a literal */
+  literalSuffix?: string
+  /** Parameters for creating a column of this type */
+  createParams?: string[]
+  /** Nullability (0=no, 1=yes, 2=unknown) */
+  nullable: number
+  /** Whether the type is case-sensitive */
+  caseSensitive: boolean
+  /** Searchability (0=none, 1=char, 2=basic, 3=full) */
+  searchable: number
+  /** Whether the type is unsigned (null if not applicable) */
+  unsignedAttribute?: boolean
+  /** Whether the type has fixed precision and scale */
+  fixedPrecScale: boolean
+  /** Whether the type is auto-increment (null if not applicable) */
+  autoIncrement?: boolean
+  /** Localized type name */
+  localTypeName?: string
+  /** Minimum scale (null if not applicable) */
+  minimumScale?: number
+  /** Maximum scale (null if not applicable) */
+  maximumScale?: number
+  /** SQL data type value */
+  sqlDataType: number
+  /** Datetime subcode (for interval/datetime types) */
+  datetimeSubcode?: number
+  /** Numeric precision radix (2 or 10, null if not applicable) */
+  numPrecRadix?: number
+  /** Interval leading precision (null if not applicable) */
+  intervalPrecision?: number
+}
+
 // ============================================================================
 // Streaming Types
 // ============================================================================

@@ -121,6 +121,70 @@ await pool.withConnection(async (client) => {
 await pool.close()
 ```
 
+## Streaming Best Practices
+
+Arrow Flight SQL is streaming-first by design. For large result sets, use streaming to minimize
+memory usage:
+
+```typescript
+// ✅ GOOD: Stream results for memory efficiency
+const result = await client.query("SELECT * FROM large_table")
+let totalRows = 0
+
+for await (const batch of result.stream()) {
+  // Process one batch at a time - memory-efficient
+  totalRows += batch.numRows
+  await processRecordBatch(batch) // Your processing logic
+}
+console.log(`Processed ${totalRows} rows`)
+
+// ❌ AVOID: collect() loads entire result into memory
+// const table = await result.collect()  // May cause OOM for large results!
+
+// ✅ GOOD: Process with backpressure-aware async iteration
+async function processWithBackpressure(result: QueryResult) {
+  const stream = result.stream()
+
+  for await (const batch of stream) {
+    // Async work in the loop naturally creates backpressure
+    // The stream won't fetch the next batch until this completes
+    await uploadToS3(batch)
+  }
+}
+
+// ✅ GOOD: Early termination with break
+async function findFirst(result: QueryResult, predicate: (row: any) => boolean) {
+  for await (const batch of result.stream()) {
+    for (let i = 0; i < batch.numRows; i++) {
+      const row = batch.get(i)
+      if (predicate(row)) {
+        return row // Stream automatically cleaned up
+      }
+    }
+  }
+  return null
+}
+
+// ✅ GOOD: Use LIMIT at the SQL level when possible
+const limitedResult = await client.query("SELECT * FROM large_table LIMIT 1000")
+const table = await limitedResult.collect() // Safe with LIMIT
+
+// ✅ GOOD: Monitor memory with batch sizes
+for await (const batch of result.stream()) {
+  console.log(`Batch: ${batch.numRows} rows, ~${batch.byteLength} bytes`)
+}
+```
+
+### When to Use `collect()` vs `stream()`
+
+| Scenario                       | Recommendation                                         |
+| ------------------------------ | ------------------------------------------------------ |
+| Small result sets (<100K rows) | `collect()` is fine                                    |
+| Large/unknown result size      | Use `stream()` with batch processing                   |
+| Need aggregations              | Stream and aggregate incrementally                     |
+| Export to file                 | Stream and write chunks                                |
+| Memory-constrained environment | Always `stream()`, never `collect()` unbounded results |
+
 ## Real-Time Subscriptions
 
 Subscribe to live data updates using the `DoExchange` bidirectional streaming protocol:
@@ -380,6 +444,26 @@ for (const pk of primaryKeys) {
 // Get foreign key relationships
 const exportedKeys = await client.getExportedKeys("users") // Keys referencing this table
 const importedKeys = await client.getImportedKeys("orders") // Keys this table references
+
+// Get cross-reference between two tables
+const refs = await client.getCrossReference({
+  pkTable: "users",
+  fkTable: "orders",
+  pkDbSchema: "public",
+  fkDbSchema: "public"
+})
+
+// Get server SQL info and capabilities
+const sqlInfo = await client.getSqlInfo()
+for (const info of sqlInfo) {
+  console.log(`Info ${info.infoName}: ${info.value}`)
+}
+
+// Get supported data types
+const typeInfo = await client.getXdbcTypeInfo()
+for (const t of typeInfo) {
+  console.log(`${t.typeName}: SQL type ${t.dataType}`)
+}
 ```
 
 ## Prepared Statements
@@ -597,6 +681,31 @@ Tested against:
 - DuckDB Flight SQL extension
 - DataFusion Ballista
 - Custom lakehouse implementations
+
+### Server Compatibility Matrix
+
+| Server                 | Version | Query | Prepared Stmt | Catalog | Subscriptions |
+| ---------------------- | ------- | ----- | ------------- | ------- | ------------- |
+| Arrow Flight SQL (ref) | 13.0+   | ✅    | ✅            | ✅      | ❌            |
+| DuckDB Flight SQL      | 0.9+    | ✅    | ✅            | ✅      | ❌            |
+| DataFusion Ballista    | 0.12+   | ✅    | ✅            | ✅      | ❌            |
+| Qualithm Lakehouse     | 1.0+    | ✅    | ✅            | ✅      | ✅            |
+
+**Feature Support Notes:**
+
+- **Query**: Basic SQL query execution via `query()` and `execute()`
+- **Prepared Stmt**: Prepared statements with parameter binding
+- **Catalog**: `getCatalogs()`, `getSchemas()`, `getTables()`, `getSqlInfo()`, etc.
+- **Subscriptions**: Real-time streaming via `DoExchange` (server-specific feature)
+
+**Arrow Protocol Versions:**
+
+| Arrow Version | Flight SQL Version | Status                  |
+| ------------- | ------------------ | ----------------------- |
+| 18.0+         | 13.0+              | ✅ Fully supported      |
+| 15.0-17.x     | 13.0               | ✅ Supported            |
+| 12.0-14.x     | 12.0               | ⚠️ May work, not tested |
+| <12.0         | <12.0              | ❌ Not supported        |
 
 ## Development
 

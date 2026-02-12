@@ -65,6 +65,8 @@ runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 24 pass
 | L8  | Use `@grpc/grpc-js` for gRPC transport         | Mature, well-maintained, Node.js native gRPC implementation    |
 | L9  | Generate types from official .proto files      | Ensures protocol compliance, tracks upstream changes           |
 | L10 | Use `apache-arrow` npm package                 | Official Arrow implementation, battle-tested, full IPC support |
+| L11 | Browser/Deno via gRPC-web with proxy           | gRPC-web is mature; native HTTP/2 lacks browser support        |
+| L12 | Custom connection pool implementation          | Flight-specific health checks, retry integration, no deps      |
 
 ---
 
@@ -72,10 +74,9 @@ runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 24 pass
 
 ### Open Decisions
 
-| ID  | Question                       | Context                                                         |
-| --- | ------------------------------ | --------------------------------------------------------------- |
-| O4  | Browser support strategy       | gRPC-web proxy required, or HTTP/2 direct where supported       |
-| O5  | Connection pool implementation | Generic pool vs custom implementation for Flight-specific needs |
+| ID  | Question | Context           |
+| --- | -------- | ----------------- |
+| —   | —        | No open decisions |
 
 ### Risks
 
@@ -143,3 +144,4 @@ runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 24 pass
 | 2026-02-11 | Refactored `client.ts` to use FlightTransport abstraction. Removed direct `@grpc/grpc-js` imports—client now uses transport interface for all gRPC operations. Transport is auto-created via `getTransportForRuntime()` or can be injected via `options.transport`. Error handling unified via `wrapTransportError()` that handles gRPC status codes without importing grpc module. This enables future browser/Deno support by swapping transport implementations.                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-02-11 | Fixed prepared statements. Server was storing raw SQL in handle, but client was misinterpreting the ActionCreatePreparedStatementResult body which is wrapped in protobuf Any. Added `unwrapAny()` helper in proto.ts to extract inner message. Also implemented `get_flight_info_prepared_statement` and `do_get_prepared_statement` methods in lakehouse server (sql.rs). All 24 integration tests now pass.                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-02-12 | Completed M9 (Browser & Deno Support). Created `transport-grpc-web.ts` with manual protobuf encoding/decoding for gRPC-web protocol (no additional dependencies). Implemented 5-byte message framing, trailer parsing, and fetch-based unary/server-streaming calls. Registered for Browser and Deno runtimes (both use fetch API). Bidirectional streaming (DoPut, DoExchange, Handshake) throws clear errors—gRPC-web spec doesn't support client streaming. Added 12 unit tests and Playwright-based browser integration tests. CI now includes Deno test job. README updated with gRPC-web proxy documentation (Envoy example).                                                                                                                                                                                                   |
+| 2026-02-13 | Added remaining Flight SQL catalog commands: `getSqlInfo()` (server metadata/capabilities), `getXdbcTypeInfo()` (XDBC data types), `getCrossReference()` (FK relationships between tables). Added corresponding types `SqlInfo`, `SqlInfoValue`, `XdbcTypeInfo` to types.ts and protobuf encoders to proto.ts. Resolved open decisions O4 (browser: gRPC-web proxy) and O5 (pool: custom implementation). Added server compatibility matrix and streaming best practices documentation to README addressing R1-R4 risks.                                                                                                                                                                                                                                                                                                              |

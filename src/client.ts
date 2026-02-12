@@ -13,12 +13,15 @@ import {
   encodeActionClosePreparedStatementRequest,
   encodeActionCreatePreparedStatementRequest,
   encodeCommandGetCatalogs,
+  encodeCommandGetCrossReference,
   encodeCommandGetDbSchemas,
   encodeCommandGetExportedKeys,
   encodeCommandGetImportedKeys,
   encodeCommandGetPrimaryKeys,
+  encodeCommandGetSqlInfo,
   encodeCommandGetTables,
   encodeCommandGetTableTypes,
+  encodeCommandGetXdbcTypeInfo,
   encodeCommandPreparedStatementQuery,
   encodeCommandStatementQuery,
   encodeCommandStatementUpdate,
@@ -45,13 +48,16 @@ import {
   type PrimaryKeyInfo,
   type SchemaInfo,
   type SchemaResult,
+  type SqlInfo,
+  type SqlInfoValue,
   type SubscribeOptions,
   SubscriptionMessageType,
   type SubscriptionMetadata,
   SubscriptionMode,
   type TableInfo,
   type TableType,
-  type Ticket
+  type Ticket,
+  type XdbcTypeInfo
 } from "./types"
 
 // Default configuration values
@@ -573,6 +579,135 @@ export class FlightSqlClient {
     this.ensureConnected()
 
     const command = encodeCommandGetImportedKeys(table, catalog, schema)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchForeignKeyResults(flightInfo)
+  }
+
+  /**
+   * Get SQL server information and capabilities.
+   *
+   * @param infoCodes - Optional array of specific info codes to retrieve.
+   *                    If omitted, all available info is retrieved.
+   * @returns Array of SQL info name-value pairs
+   *
+   * @example
+   * ```typescript
+   * // Get all server information
+   * const allInfo = await client.getSqlInfo()
+   *
+   * // Get specific info (server name and version)
+   * const info = await client.getSqlInfo([0, 1])
+   * for (const item of info) {
+   *   console.log(`${item.infoName}: ${item.value}`)
+   * }
+   * ```
+   */
+  async getSqlInfo(infoCodes?: number[]): Promise<SqlInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetSqlInfo(infoCodes)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<SqlInfo>(flightInfo, (row) => this.parseSqlInfoRow(row))
+  }
+
+  /**
+   * Parse a SQL info row from the dense union value format.
+   */
+  private parseSqlInfoRow(row: Record<string, unknown>): SqlInfo {
+    const infoName = row.info_name as number
+    const value = row.value as SqlInfoValue
+
+    return { infoName, value }
+  }
+
+  /**
+   * Get XDBC type information supported by the server.
+   *
+   * @param dataType - Optional specific data type code to retrieve info for.
+   *                   If omitted, all types are retrieved.
+   * @returns Array of XDBC type info objects
+   *
+   * @example
+   * ```typescript
+   * // Get all supported types
+   * const types = await client.getXdbcTypeInfo()
+   * for (const t of types) {
+   *   console.log(`${t.typeName}: SQL type ${t.dataType}`)
+   * }
+   * ```
+   */
+  async getXdbcTypeInfo(dataType?: number): Promise<XdbcTypeInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetXdbcTypeInfo(dataType)
+    const descriptor: FlightDescriptor = {
+      type: 2 as DescriptorType, // CMD
+      cmd: command
+    }
+
+    const flightInfo = await this.getFlightInfo(descriptor)
+    return this.fetchCatalogResults<XdbcTypeInfo>(flightInfo, (row) => ({
+      typeName: row.type_name as string,
+      dataType: row.data_type as number,
+      columnSize: row.column_size as number | undefined,
+      literalPrefix: row.literal_prefix as string | undefined,
+      literalSuffix: row.literal_suffix as string | undefined,
+      createParams: row.create_params as string[] | undefined,
+      nullable: row.nullable as number,
+      caseSensitive: row.case_sensitive as boolean,
+      searchable: row.searchable as number,
+      unsignedAttribute: row.unsigned_attribute as boolean | undefined,
+      fixedPrecScale: row.fixed_prec_scale as boolean,
+      autoIncrement: row.auto_increment as boolean | undefined,
+      localTypeName: row.local_type_name as string | undefined,
+      minimumScale: row.minimum_scale as number | undefined,
+      maximumScale: row.maximum_scale as number | undefined,
+      sqlDataType: row.sql_data_type as number,
+      datetimeSubcode: row.datetime_subcode as number | undefined,
+      numPrecRadix: row.num_prec_radix as number | undefined,
+      intervalPrecision: row.interval_precision as number | undefined
+    }))
+  }
+
+  /**
+   * Get the foreign key relationships between two tables.
+   *
+   * This returns foreign keys in the foreign key table that reference
+   * the primary key of the primary key table.
+   *
+   * @param options - Options specifying the primary key and foreign key tables
+   * @returns Array of foreign key information
+   *
+   * @example
+   * ```typescript
+   * // Find foreign keys from "orders" table that reference "users" table
+   * const refs = await client.getCrossReference({
+   *   pkTable: "users",
+   *   fkTable: "orders"
+   * })
+   * ```
+   */
+  async getCrossReference(options: {
+    pkTable: string
+    fkTable: string
+    pkCatalog?: string
+    pkDbSchema?: string
+    fkCatalog?: string
+    fkDbSchema?: string
+  }): Promise<ForeignKeyInfo[]> {
+    this.ensureConnected()
+
+    const command = encodeCommandGetCrossReference(options)
     const descriptor: FlightDescriptor = {
       type: 2 as DescriptorType, // CMD
       cmd: command
