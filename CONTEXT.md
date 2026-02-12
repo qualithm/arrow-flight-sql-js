@@ -21,7 +21,7 @@ consumer).
 
 ## Current Reality
 
-**Status: M1–M8 In Progress** — Production-ready client, cross-runtime compatibility in progress.
+**Status: Complete** — Production-ready client with full cross-runtime support.
 
 ### Core Modules
 
@@ -42,12 +42,8 @@ consumer).
 
 ### Tests
 
-Unit: 292 tests (errors: 27, retry: 31, proto: 43, metrics: 38, subscription: 26, query-builder: 80,
-runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 29 pass
-
-### Dependencies
-
-`@grpc/grpc-js` 1.14.3 · `@grpc/proto-loader` 0.8.0 · `apache-arrow` 21.1.0
+Unit: 292 (errors: 27, retry: 31, proto: 43, metrics: 38, subscription: 26, query-builder: 80,
+runtime: 20, transport: 15, transport-grpc-web: 12). Integration: 29.
 
 ---
 
@@ -80,12 +76,11 @@ runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 29 pass
 
 ### Risks
 
-| ID  | Risk                                  | Impact                                        | Mitigation                                                 |
-| --- | ------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
-| R1  | gRPC/HTTP2 browser support is limited | Reduced browser compatibility                 | Provide gRPC-web adapter option                            |
-| R2  | Arrow IPC format complexity           | Implementation bugs, interop issues           | Extensive integration testing against multiple servers     |
-| R3  | Protocol version drift                | Incompatibility with newer Flight SQL servers | Track upstream proto changes, version compatibility matrix |
-| R4  | Large result set memory pressure      | OOM in constrained environments               | Streaming-first API, backpressure support                  |
+| ID  | Risk                             | Impact                                        | Mitigation                                                 |
+| --- | -------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
+| R2  | Arrow IPC format complexity      | Implementation bugs, interop issues           | Extensive integration testing against multiple servers     |
+| R3  | Protocol version drift           | Incompatibility with newer Flight SQL servers | Track upstream proto changes, version compatibility matrix |
+| R4  | Large result set memory pressure | OOM in constrained environments               | Streaming-first API, backpressure support                  |
 
 ---
 
@@ -99,9 +94,7 @@ runtime: 20, transport: 15, transport-grpc-web: 12) Integration: 29 pass
 
 ---
 
-## Milestones
-
-### Completed ✅
+## Completed Milestones
 
 | M#  | Name            | Summary                                                       |
 | --- | --------------- | ------------------------------------------------------------- |

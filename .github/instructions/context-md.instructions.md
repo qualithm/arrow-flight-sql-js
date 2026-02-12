@@ -24,9 +24,9 @@ The "Learnings" section must never be:
 - Deleted
 - Reordered
 
-Only append new entries at the bottom.
+Only append new rows at the bottom of the table.
 
-Format: `- **YYYY-MM-DD**: [Description of learning]`
+Format: Table with Date, Learning columns
 
 ### 3. Current Reality Contains Only Present Facts
 
@@ -152,24 +152,32 @@ Never leave contradictions unaddressed.
 ### Next Milestones
 
 - Ordered by priority
-- Actionable task lists
+- Actionable task checklists
 - Move to "Current Reality" when done
 - Keep in sync with actual work
 - Use standard heading format: `### MN: Title`
 - Milestones must be numbered sequentially (M1, M2, M3...) with no gaps
 - Each milestone has:
-  - Bullet list of tasks
+  - Checklist of tasks using `- [ ]` format
   - Optional `Acceptance:` line with measurable criteria
 - Code TODOs must be tracked as milestone tasks, not in other sections
+- Mark tasks complete with `- [x]` as work progresses
 
 ### Learnings
 
 - Append-only (critical rule)
-- Date-prefixed entries: `- **YYYY-MM-DD**: [Learning]`
+- Use table format with Date and Learning columns
 - Capture decisions, mistakes, discoveries
 - Include context for future readers
 - Section header must be `## Learnings` (not `## Learnings (append-only)`)
 - Include intro line: `> Append-only. Never edit or delete existing entries.`
+- Table format:
+
+```markdown
+| Date       | Learning |
+| ---------- | -------- |
+| YYYY-MM-DD | ...      |
+```
 
 ---
 
@@ -277,8 +285,8 @@ Use this structure when creating a new CONTEXT.md:
 
 ### M1: [Title]
 
-- [Task 1]
-- [Task 2]
+- [ ] [Task 1]
+- [ ] [Task 2]
 
 Acceptance: [Measurable criteria]
 
@@ -288,7 +296,9 @@ Acceptance: [Measurable criteria]
 
 > Append-only. Never edit or delete existing entries.
 
-- **YYYY-MM-DD**: [First learning when CONTEXT.md is created]
+| Date       | Learning                                    |
+| ---------- | ------------------------------------------- |
+| YYYY-MM-DD | [First learning when CONTEXT.md is created] |
 ```
 
 ---
@@ -335,12 +345,13 @@ When auditing an existing CONTEXT.md against the codebase:
 
 - [ ] Numbered sequentially (M1, M2, M3...) with no gaps
 - [ ] Format: `### MN: Title`
+- [ ] Tasks use checklist format (`- [ ]` / `- [x]`)
 - [ ] Completed milestones moved to Current Reality
 
 ### Learnings
 
 - [ ] Append-only (no edits to existing entries)
-- [ ] Date format: `- **YYYY-MM-DD**: [Learning]`
+- [ ] Table format with Date and Learning columns
 - [ ] Intro line present: `> Append-only. Never edit or delete existing entries.`
 
 ---
