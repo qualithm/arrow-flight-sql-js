@@ -145,3 +145,5 @@ runtime: 20, transport: 15, transport-grpc-web: 12). Integration: 29.
 - **2026-02-12**: gRPC-web transport: manual 5-byte framing, trailer parsing, fetch-based. No client
   streaming per spec.
 - **2026-02-13**: Added getSqlInfo(), getXdbcTypeInfo(), getCrossReference() catalog commands.
+- **2026-02-13**: Proto files synced with upstream Apache Arrow. Changes are documentation-only
+  (grammar fixes, enhanced Location message docs for HTTP URIs). Wire format unchanged.
