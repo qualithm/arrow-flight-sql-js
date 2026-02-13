@@ -80,6 +80,12 @@ runtime: 20, transport: 15, transport-grpc-web: 12). Integration: 29.
 
 ## Open Decisions & Risks
 
+### Open Decisions
+
+| ID  | Question | Context |
+| --- | -------- | ------- |
+| —   | None     | —       |
+
 ### Risks
 
 | ID  | Risk                             | Impact                                        | Mitigation                                                 |
@@ -100,50 +106,38 @@ runtime: 20, transport: 15, transport-grpc-web: 12). Integration: 29.
 
 ---
 
+## Next Milestones
+
+> No planned milestones. Project is complete and in maintenance mode.
+
+---
+
 ## Learnings
 
 > Append-only. Never edit or delete existing entries.
 
-- **2026-01-26**: Project initialized. Modeling on Java/C++/Go reference implementations for API
-  consistency.
-- **2026-01-26**: Manual protobuf encoding in proto.ts avoids full runtime dependency. Wire format
-  is varint + length-delimited.
-- **2026-01-26**: ESLint `erasableSyntaxOnly` requires const objects instead of enums (`as const`
-  pattern).
-- **2026-01-26**: gRPC streams in @grpc/grpc-js are async iterable—no manual stream-to-iterator
-  conversion needed.
-- **2026-01-26**: Arrow IPC messages use custom framing (continuation byte + metadata length) vs
-  standard file format.
-- **2026-01-27**: Connection pool uses object wrapper pattern for error state tracking (TypeScript
-  event handler mutation).
-- **2026-01-27**: RetryPolicy class provides pre-built policies (none, fast, default, aggressive,
-  reconnection).
-- **2026-01-27**: Catalog methods use generic fetchCatalogResults helper with field mappers for
-  typed results.
-- **2026-01-27**: MetricsHandler interface enables pluggable observability with standard metric
-  names.
-- **2026-01-27**: Bun test runner with describe/test/expect pattern.
-- **2026-01-27**: Integration tests revealed lakehouse gaps: catalog commands as raw SQL, no
-  prepared statements.
-- **2026-01-27**: npm publish requires main, module, types, exports, files in package.json.
-- **2026-02-04**: Schema parsing: `RecordBatchReader.from()` expects IPC stream, but
-  FlightInfo.schema is single message. Use `MessageReader`.
-- **2026-02-05**: Fixed schema with `MessageReader.readSchema()`. FlightData.dataHeader needs
-  continuation token + length prefix.
-- **2026-02-09**: Server wiring correct: arrow-flight v57 blanket impl dispatches FlightService to
-  FlightSqlService trait.
-- **2026-02-09**: DoExchange uses ClientDuplexStream. Subscription handles heartbeats, reconnection,
-  AbortSignal.
-- **2026-02-09**: QueryBuilder: fluent API, SQL injection protection, JOINs, WHERE, ORDER BY, LIMIT,
-  GROUP BY, parameterized queries.
-- **2026-02-11**: runtime.ts detects Bun/Deno/Node/Browser/Worker. Bun detected before Node despite
-  compatibility layer.
-- **2026-02-11**: client.ts refactored to FlightTransport abstraction—no direct @grpc/grpc-js
-  imports.
-- **2026-02-11**: Fixed prepared statements: ActionCreatePreparedStatementResult wrapped in protobuf
-  Any. Added unwrapAny().
-- **2026-02-12**: gRPC-web transport: manual 5-byte framing, trailer parsing, fetch-based. No client
-  streaming per spec.
-- **2026-02-13**: Added getSqlInfo(), getXdbcTypeInfo(), getCrossReference() catalog commands.
-- **2026-02-13**: Proto files synced with upstream Apache Arrow. Changes are documentation-only
-  (grammar fixes, enhanced Location message docs for HTTP URIs). Wire format unchanged.
+| Date       | Learning                                                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-01-26 | Project initialized. Modeling on Java/C++/Go reference implementations for API consistency.                                                    |
+| 2026-01-26 | Manual protobuf encoding in proto.ts avoids full runtime dependency. Wire format is varint + length-delimited.                                 |
+| 2026-01-26 | ESLint `erasableSyntaxOnly` requires const objects instead of enums (`as const` pattern).                                                      |
+| 2026-01-26 | gRPC streams in @grpc/grpc-js are async iterable—no manual stream-to-iterator conversion needed.                                               |
+| 2026-01-26 | Arrow IPC messages use custom framing (continuation byte + metadata length) vs standard file format.                                           |
+| 2026-01-27 | Connection pool uses object wrapper pattern for error state tracking (TypeScript event handler mutation).                                      |
+| 2026-01-27 | RetryPolicy class provides pre-built policies (none, fast, default, aggressive, reconnection).                                                 |
+| 2026-01-27 | Catalog methods use generic fetchCatalogResults helper with field mappers for typed results.                                                   |
+| 2026-01-27 | MetricsHandler interface enables pluggable observability with standard metric names.                                                           |
+| 2026-01-27 | Bun test runner with describe/test/expect pattern.                                                                                             |
+| 2026-01-27 | Integration tests revealed lakehouse gaps: catalog commands as raw SQL, no prepared statements.                                                |
+| 2026-01-27 | npm publish requires main, module, types, exports, files in package.json.                                                                      |
+| 2026-02-04 | Schema parsing: `RecordBatchReader.from()` expects IPC stream, but FlightInfo.schema is single message. Use `MessageReader`.                   |
+| 2026-02-05 | Fixed schema with `MessageReader.readSchema()`. FlightData.dataHeader needs continuation token + length prefix.                                |
+| 2026-02-09 | Server wiring correct: arrow-flight v57 blanket impl dispatches FlightService to FlightSqlService trait.                                       |
+| 2026-02-09 | DoExchange uses ClientDuplexStream. Subscription handles heartbeats, reconnection, AbortSignal.                                                |
+| 2026-02-09 | QueryBuilder: fluent API, SQL injection protection, JOINs, WHERE, ORDER BY, LIMIT, GROUP BY, parameterized queries.                            |
+| 2026-02-11 | runtime.ts detects Bun/Deno/Node/Browser/Worker. Bun detected before Node despite compatibility layer.                                         |
+| 2026-02-11 | client.ts refactored to FlightTransport abstraction—no direct @grpc/grpc-js imports.                                                           |
+| 2026-02-11 | Fixed prepared statements: ActionCreatePreparedStatementResult wrapped in protobuf Any. Added unwrapAny().                                     |
+| 2026-02-12 | gRPC-web transport: manual 5-byte framing, trailer parsing, fetch-based. No client streaming per spec.                                         |
+| 2026-02-13 | Added getSqlInfo(), getXdbcTypeInfo(), getCrossReference() catalog commands.                                                                   |
+| 2026-02-13 | Proto files synced with upstream Apache Arrow. Changes are documentation-only (grammar fixes, enhanced Location message docs). Wire unchanged. |
