@@ -413,12 +413,12 @@ When CONTEXT.md exceeds 400 lines, apply these compaction rules.
 
 ### Compaction Triggers
 
-| Trigger | Threshold |
-| ------- | --------- |
-| File length | > 400 lines |
-| Learnings table | > 30 entries |
+| Trigger              | Threshold                              |
+| -------------------- | -------------------------------------- |
+| File length          | > 400 lines                            |
+| Learnings table      | > 30 entries                           |
 | Completed milestones | > 3 fully-completed milestone sections |
-| Stale risks | Risks unreviewed for > 90 days |
+| Stale risks          | Risks unreviewed for > 90 days         |
 
 ### Archive File
 
@@ -436,8 +436,8 @@ Create `CONTEXT-ARCHIVE.md` for historical content:
 
 ## Archived Decisions
 
-| ID | Decision | Archived | Reason |
-| -- | -------- | -------- | ------ |
+| ID  | Decision | Archived | Reason |
+| --- | -------- | -------- | ------ |
 ```
 
 ### What to Archive
@@ -470,8 +470,8 @@ Optionally keep a summary table:
 ```markdown
 ### Completed Milestones
 
-| Milestone | Completed |
-| --------- | --------- |
+| Milestone         | Completed  |
+| ----------------- | ---------- |
 | M1: Core Protocol | 2026-01-26 |
 ```
 
@@ -482,4 +482,5 @@ Optionally keep a summary table:
 - [ ] No completed milestone sections remain
 - [ ] All Current Reality items verifiable in codebase
 - [ ] Archive file updated with moved content
-- [ ] Compaction logged: `YYYY-MM-DD | Compacted CONTEXT.md; archived N learnings, removed M milestones`
+- [ ] Compaction logged:
+      `YYYY-MM-DD | Compacted CONTEXT.md; archived N learnings, removed M milestones`
