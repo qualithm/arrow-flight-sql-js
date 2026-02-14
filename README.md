@@ -17,18 +17,6 @@ servers. It handles the complete protocol stack:
 - **Arrow IPC Streaming** – Native Arrow record batch handling
 - **Authentication** – Bearer tokens, basic auth, and custom handlers
 
-## Design Goals
-
-Arrow Flight SQL JS is modeled on the canonical implementations:
-
-| Reference                 | What We Adopt                                        |
-| ------------------------- | ---------------------------------------------------- |
-| **Java** (reference impl) | Comprehensive API surface, error handling patterns   |
-| **C++**                   | Streaming-first patterns, performance considerations |
-| **Go**                    | Connection pooling, context/cancellation model       |
-
-We aim for **API parity** with the official clients where JavaScript idioms allow.
-
 ## Installation
 
 ```bash
@@ -184,86 +172,6 @@ for await (const batch of result.stream()) {
 | Need aggregations              | Stream and aggregate incrementally                     |
 | Export to file                 | Stream and write chunks                                |
 | Memory-constrained environment | Always `stream()`, never `collect()` unbounded results |
-
-## Real-Time Subscriptions
-
-Subscribe to live data updates using the `DoExchange` bidirectional streaming protocol:
-
-```typescript
-import { FlightSqlClient, SubscriptionMode } from "@qualithm/arrow-flight-sql-js"
-
-const client = new FlightSqlClient({
-  host: "localhost",
-  port: 31337,
-  tls: true,
-  auth: { type: "bearer", token: "your-bearer-token" }
-})
-
-await client.connect()
-
-// Subscribe to real-time updates
-const subscription = client.subscribe("SELECT * FROM events WHERE status = 'pending'", {
-  mode: SubscriptionMode.ChangesOnly, // Full | ChangesOnly | Tail
-  heartbeatMs: 30_000 // Server heartbeat interval
-})
-
-// Consume batches as they arrive
-for await (const batch of subscription) {
-  console.log(`Received ${batch.numRows} rows`)
-}
-
-// Or with cancellation
-const controller = new AbortController()
-const cancelableSubscription = client.subscribe(query, {
-  signal: controller.signal,
-  autoReconnect: true,
-  maxReconnectAttempts: 10
-})
-
-// Later: cancel the subscription
-controller.abort()
-
-// Or manually unsubscribe
-await cancelableSubscription.unsubscribe()
-```
-
-### Subscription Options
-
-| Option                 | Default       | Description                                        |
-| ---------------------- | ------------- | -------------------------------------------------- |
-| `mode`                 | `ChangesOnly` | Subscription mode (Full, ChangesOnly, Tail)        |
-| `heartbeatMs`          | `30000`       | Server heartbeat interval in milliseconds          |
-| `signal`               | -             | AbortSignal for cancellation                       |
-| `autoReconnect`        | `true`        | Auto-reconnect on connection loss                  |
-| `maxReconnectAttempts` | `10`          | Maximum reconnection attempts                      |
-| `reconnectDelayMs`     | `1000`        | Initial reconnect delay                            |
-| `maxReconnectDelayMs`  | `30000`       | Maximum reconnect delay (with exponential backoff) |
-
-### Low-Level DoExchange
-
-For custom bidirectional protocols:
-
-```typescript
-const exchange = client.doExchange({
-  type: DescriptorType.CMD,
-  cmd: new TextEncoder().encode("CUSTOM_COMMAND")
-})
-
-// Send data to server
-await exchange.send({
-  dataHeader: new Uint8Array(),
-  dataBody: new Uint8Array(),
-  appMetadata: new TextEncoder().encode(JSON.stringify({ action: "subscribe" }))
-})
-
-// Receive data from server
-for await (const data of exchange) {
-  console.log("Received:", data)
-}
-
-// Half-close (signal end of client stream)
-await exchange.end()
-```
 
 ## Observability & Metrics
 
@@ -490,90 +398,6 @@ try {
 }
 ```
 
-## API Reference
-
-### FlightSqlClient
-
-The main client for interacting with Flight SQL servers.
-
-#### Constructor Options
-
-| Option             | Type                     | Default | Description                     |
-| ------------------ | ------------------------ | ------- | ------------------------------- |
-| `host`             | `string`                 | —       | Server hostname                 |
-| `port`             | `number`                 | —       | Server port                     |
-| `tls`              | `boolean`                | `true`  | Enable TLS                      |
-| `auth`             | `AuthConfig`             | —       | Authentication configuration    |
-| `credentials`      | `ChannelCredentials`     | —       | Custom gRPC channel credentials |
-| `metadata`         | `Record<string, string>` | —       | Custom metadata headers         |
-| `connectTimeoutMs` | `number`                 | `30000` | Connection timeout in ms        |
-| `requestTimeoutMs` | `number`                 | `60000` | Request timeout in ms           |
-
-##### AuthConfig
-
-```typescript
-type AuthConfig =
-  | { type: "bearer"; token: string }
-  | { type: "basic"; username: string; password: string }
-  | { type: "none" }
-```
-
-#### Methods
-
-##### Query Execution
-
-- `query(query: string, options?): Promise<QueryResult>` – Execute SQL, returns result with
-  `stream()` and `collect()` methods
-- `execute(query: string, options?): Promise<FlightInfo>` – _(deprecated)_ Execute SQL, return
-  flight info
-- `executeUpdate(query: string): Promise<bigint>` – Execute DML, return affected rows
-- `prepare(query: string): Promise<PreparedStatement>` – Create prepared statement
-
-##### Catalog Introspection
-
-- `getCatalogs(): Promise<string[]>` – List available catalogs
-- `getSchemas(catalog?, schemaPattern?): Promise<Schema[]>` – List schemas
-- `getTables(options?): Promise<Table[]>` – List tables with filters
-- `getTableTypes(): Promise<string[]>` – List table type names
-- `getPrimaryKeys(table, catalog?, schema?): Promise<PrimaryKey[]>` – Get primary keys
-- `getExportedKeys(table, catalog?, schema?): Promise<ForeignKey[]>` – Get exported foreign keys
-- `getImportedKeys(table, catalog?, schema?): Promise<ForeignKey[]>` – Get imported foreign keys
-
-##### Low-Level Flight Operations
-
-- `getFlightInfo(descriptor): Promise<FlightInfo>` – Get flight metadata
-- `doGet(ticket): AsyncIterable<RecordBatch>` – Fetch data by ticket
-- `doPut(descriptor, stream): Promise<void>` – Upload Arrow data
-- `doAction(type, body?): AsyncIterable<Result>` – Execute custom action
-
-##### Connection Management
-
-- `connect(): Promise<void>` – Establish connection and authenticate
-- `close(): void` – Close connection and release resources
-- `isConnected(): boolean` – Check connection status
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    FlightSqlClient                      │
-├─────────────────────────────────────────────────────────┤
-│  Query Builder  │  Prepared Statements  │  Catalog API  │
-├─────────────────────────────────────────────────────────┤
-│                   Flight SQL Protocol                   │
-│         (GetFlightInfo, DoGet, DoPut, DoAction)         │
-├─────────────────────────────────────────────────────────┤
-│                  Protocol Buffers Layer                 │
-│            (FlightDescriptor, FlightInfo, etc.)         │
-├─────────────────────────────────────────────────────────┤
-│                    gRPC Transport                       │
-│              (HTTP/2 + TLS + Auth Headers)              │
-├─────────────────────────────────────────────────────────┤
-│                   Connection Pool                       │
-│        (Health checks, reconnection, backoff)           │
-└─────────────────────────────────────────────────────────┘
-```
-
 ## Compatibility
 
 ### Runtime Support
@@ -620,93 +444,6 @@ const result = await client.query("SELECT * FROM my_table")
 - Bidirectional streaming (`DoExchange`, `Handshake`) is not supported
 - Use bearer token auth via `setAuthToken()` instead of `Handshake`
 
-**Envoy gRPC-Web Proxy Example:**
-
-```yaml
-# envoy.yaml
-static_resources:
-  listeners:
-    - address:
-        socket_address:
-          address: 0.0.0.0
-          port_value: 8080
-      filter_chains:
-        - filters:
-            - name: envoy.filters.network.http_connection_manager
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                codec_type: AUTO
-                stat_prefix: ingress_http
-                route_config:
-                  name: local_route
-                  virtual_hosts:
-                    - name: backend
-                      domains: ["*"]
-                      routes:
-                        - match: { prefix: "/" }
-                          route:
-                            cluster: flight_sql_backend
-                      cors:
-                        allow_origin_string_match:
-                          - prefix: "*"
-                        allow_methods: "GET, PUT, DELETE, POST, OPTIONS"
-                        allow_headers: "content-type,x-grpc-web,x-user-agent"
-                        expose_headers: "grpc-status,grpc-message"
-                http_filters:
-                  - name: envoy.filters.http.grpc_web
-                  - name: envoy.filters.http.cors
-                  - name: envoy.filters.http.router
-  clusters:
-    - name: flight_sql_backend
-      connect_timeout: 0.25s
-      type: LOGICAL_DNS
-      http2_protocol_options: {}
-      lb_policy: ROUND_ROBIN
-      load_assignment:
-        cluster_name: flight_sql_backend
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address:
-                      address: your-flight-sql-server
-                      port_value: 50051
-```
-
-### Flight SQL Servers
-
-Tested against:
-
-- Apache Arrow Flight SQL reference server
-- DuckDB Flight SQL extension
-- DataFusion Ballista
-- Custom lakehouse implementations
-
-### Server Compatibility Matrix
-
-| Server                 | Version | Query | Prepared Stmt | Catalog | Subscriptions |
-| ---------------------- | ------- | ----- | ------------- | ------- | ------------- |
-| Arrow Flight SQL (ref) | 13.0+   | ✅    | ✅            | ✅      | ❌            |
-| DuckDB Flight SQL      | 0.9+    | ✅    | ✅            | ✅      | ❌            |
-| DataFusion Ballista    | 0.12+   | ✅    | ✅            | ✅      | ❌            |
-| Qualithm Lakehouse     | 1.0+    | ✅    | ✅            | ✅      | ✅            |
-
-**Feature Support Notes:**
-
-- **Query**: Basic SQL query execution via `query()` and `execute()`
-- **Prepared Stmt**: Prepared statements with parameter binding
-- **Catalog**: `getCatalogs()`, `getSchemas()`, `getTables()`, `getSqlInfo()`, etc.
-- **Subscriptions**: Real-time streaming via `DoExchange` (server-specific feature)
-
-**Arrow Protocol Versions:**
-
-| Arrow Version | Flight SQL Version | Status                  |
-| ------------- | ------------------ | ----------------------- |
-| 18.0+         | 13.0+              | ✅ Fully supported      |
-| 15.0-17.x     | 13.0               | ✅ Supported            |
-| 12.0-14.x     | 12.0               | ⚠️ May work, not tested |
-| <12.0         | <12.0              | ❌ Not supported        |
-
 ## Development
 
 ```bash
@@ -730,23 +467,8 @@ bun run format:fix
 bun run docs
 ```
 
-## Flight SQL Protocol Reference
-
-This client implements the
-[Arrow Flight SQL specification](https://arrow.apache.org/docs/format/FlightSql.html):
-
-- **Flight SQL 13.0** – Current target version
-- Full protobuf message support
-- All standard actions (CreatePreparedStatement, ClosePreparedStatement, etc.)
-- Catalog introspection commands
-- Transaction support (where server supports it)
+Implements [Arrow Flight SQL 13.0](https://arrow.apache.org/docs/format/FlightSql.html).
 
 ## License
 
 MIT
-
-## Related Projects
-
-- [Apache Arrow](https://arrow.apache.org/) – The Arrow columnar format
-- [Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) – High-performance data transport
-- [Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html) – SQL over Flight
