@@ -398,6 +398,30 @@ try {
 }
 ```
 
+## Real-Time Subscriptions
+
+> **Note:** Requires server support. Not all Flight SQL servers implement `DoExchange`.
+
+Subscribe to live data updates:
+
+```typescript
+const subscription = client.subscribe("SELECT * FROM events", {
+  mode: SubscriptionMode.ChangesOnly,
+  heartbeatMs: 30_000
+})
+
+for await (const batch of subscription) {
+  console.log(`Received ${batch.numRows} rows`)
+}
+
+// Cancel with AbortController
+controller.abort()
+// Or manually
+await subscription.unsubscribe()
+```
+
+See the [API documentation](https://qualithm.github.io/arrow-flight-sql-js/) for full options.
+
 ## Compatibility
 
 ### Runtime Support
