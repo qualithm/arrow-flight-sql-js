@@ -59,7 +59,7 @@ The "Learnings" section is **append-only**. Add entries when:
 - A mistake teaches something valuable
 - Context that future agents need is established
 
-Format: `- **YYYY-MM-DD**: [Learning]`
+Format: Table with Date and Learning columns (see context-md.instructions.md template)
 
 ### 6. Resolve Contradictions
 

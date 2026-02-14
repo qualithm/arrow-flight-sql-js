@@ -84,6 +84,8 @@ Never leave contradictions unaddressed.
 - Written in present tense
 - Should rarely change
 - Changes require explicit approval
+- Format: 1-2 paragraph summary followed by "Key capabilities" bullet list
+- Optional "Scope" line for boundary statements
 
 ### Current Reality
 
@@ -106,6 +108,15 @@ Never leave contradictions unaddressed.
 - Security Configuration subsection required for frontend/backend projects (table format)
 - Do not track External Dependencies or Environment Variables sections
 
+Standard subsection order (include only those applicable):
+
+1. **Architecture** — Stack table (Component | Technology)
+2. **File Structure** — Directory overview (Directory | Purpose)
+3. **Components/Modules/Crates** — Code structure table (Name | Purpose)
+4. **Features** — Feature status table (Feature | Status | Notes)
+5. **API Endpoints** — If API service (Category | Endpoints)
+6. **Security Configuration** — Always include for frontend/backend (Feature | Status | Notes)
+
 ### Locked Decisions
 
 - Numbered list for easy reference (1, 2, 3...)
@@ -122,6 +133,8 @@ Never leave contradictions unaddressed.
 - Move to "Locked Decisions" when resolved
 - Remove risks when mitigated
 - Question column must contain actual questions, not statements
+- Always include both subsections (Open Decisions and Risks), even if empty
+- Use placeholder row when section is empty: `| — | None | — |`
 - Open Decisions table format:
 
 ```markdown
@@ -227,17 +240,38 @@ Use this structure when creating a new CONTEXT.md:
 
 ## System Intent
 
-[Describe what this system does and why it exists. Present tense only.]
+[1-2 paragraph summary describing what this project does and its role in the ecosystem.]
+
+**Key capabilities:**
+
+- [Capability 1]
+- [Capability 2]
+- [Capability 3]
+
+**Scope:** [Optional boundary statement]
 
 ---
 
 ## Current Reality
 
-### [Subsection Name]
+### Architecture
 
-| Component | Status | Notes |
-| --------- | ------ | ----- |
-| ...       | ...    | ...   |
+| Component | Technology |
+| --------- | ---------- |
+| Runtime   | ...        |
+| Framework | ...        |
+
+### [Components/Modules/Crates]
+
+| Name | Purpose |
+| ---- | ------- |
+| ...  | ...     |
+
+### Features
+
+| Feature | Status | Notes |
+| ------- | ------ | ----- |
+| ...     | ...    | ...   |
 
 ### Security Configuration
 
@@ -296,9 +330,9 @@ Acceptance: [Measurable criteria]
 
 > Append-only. Never edit or delete existing entries.
 
-| Date       | Learning                                    |
-| ---------- | ------------------------------------------- |
-| YYYY-MM-DD | [First learning when CONTEXT.md is created] |
+| Date       | Learning                                             |
+| ---------- | ---------------------------------------------------- |
+| YYYY-MM-DD | Project initialised with [key architectural choice]. |
 ```
 
 ---
@@ -370,3 +404,82 @@ Before saving changes to CONTEXT.md:
 - [ ] All IDs are unique (OD-N, R-N)
 - [ ] Changes are consistent with locked decisions
 - [ ] Milestones have measurable acceptance criteria where applicable
+
+---
+
+## Compaction Guidelines
+
+When CONTEXT.md exceeds 400 lines, apply these compaction rules.
+
+### Compaction Triggers
+
+| Trigger | Threshold |
+| ------- | --------- |
+| File length | > 400 lines |
+| Learnings table | > 30 entries |
+| Completed milestones | > 3 fully-completed milestone sections |
+| Stale risks | Risks unreviewed for > 90 days |
+
+### Archive File
+
+Create `CONTEXT-ARCHIVE.md` for historical content:
+
+```markdown
+# CONTEXT-ARCHIVE.md
+
+> Historical entries archived from CONTEXT.md. Reference only.
+
+## Archived Learnings
+
+| Date | Learning |
+| ---- | -------- |
+
+## Archived Decisions
+
+| ID | Decision | Archived | Reason |
+| -- | -------- | -------- | ------ |
+```
+
+### What to Archive
+
+- Learnings older than 6 months (keep 10 most recent in CONTEXT.md)
+- Open Decisions deferred > 6 months
+- Risks that became non-issues
+
+### What to Delete
+
+- Completed milestone sections (after features verified in Current Reality)
+- Mitigated risks
+- Resolved open decisions (move to Locked Decisions first)
+- Stale Work In Flight entries
+
+### What to Consolidate
+
+- Granular tables → summary rows with counts
+- Related learnings → single summary entry before archiving
+- Repetitive status columns → remove when all "Complete"
+
+### Milestone Renumbering
+
+After removing completed milestones, renumber remaining milestones to close gaps:
+
+- M4, M5, M6 → M1, M2, M3
+
+Optionally keep a summary table:
+
+```markdown
+### Completed Milestones
+
+| Milestone | Completed |
+| --------- | --------- |
+| M1: Core Protocol | 2026-01-26 |
+```
+
+### Compaction Checklist
+
+- [ ] File under 400 lines after compaction
+- [ ] Learnings table has ≤ 30 entries
+- [ ] No completed milestone sections remain
+- [ ] All Current Reality items verifiable in codebase
+- [ ] Archive file updated with moved content
+- [ ] Compaction logged: `YYYY-MM-DD | Compacted CONTEXT.md; archived N learnings, removed M milestones`

@@ -1,21 +1,27 @@
 # CONTEXT.md
 
-> **Single source of truth.** When CONTEXT.md conflicts with other docs, CONTEXT.md is correct.
+> **This is the single source of truth for this repository.**
+>
+> When CONTEXT.md conflicts with any other document (README, code comments), CONTEXT.md is correct.
+> Update other documents to match, not the reverse.
 
 ---
 
 ## System Intent
 
-Standards-compliant Arrow Flight SQL client for JavaScript/TypeScript. Native implementation for
-gRPC/HTTP2 transport, protobuf serialization, connection pooling, Arrow IPC streaming, query
-execution, prepared statements, catalog introspection, and authentication.
+Standards-compliant Arrow Flight SQL client for JavaScript/TypeScript.
+
+**Key capabilities:**
+
+- gRPC/HTTP2 transport with protobuf serialization
+- Connection pooling with health checks
+- Arrow IPC streaming for query results
+- Prepared statements and catalog introspection
+- Cross-runtime support (Node.js 20+, Bun, Browser, Cloudflare Workers)
 
 **Design:** Modeled on Java (API surface), C++ (streaming patterns), Go (pooling) implementations.
 
-**Runtimes:** Node.js 20+, Bun, Edge (Cloudflare Workers), Browser (gRPC-web).
-
-**Scope:** Standalone library; works with any Flight SQL server (Qualithm Lakehouse is one
-consumer).
+**Scope:** Standalone library; works with any Flight SQL server.
 
 ---
 
@@ -23,7 +29,19 @@ consumer).
 
 **Status: Complete** — Production-ready client with full cross-runtime support.
 
-### Core Modules
+### Architecture
+
+| Component | Technology                         |
+| --------- | ---------------------------------- |
+| Language  | TypeScript (ESM-only)              |
+| Transport | @grpc/grpc-js (Node/Bun), gRPC-web |
+| Protocol  | Arrow Flight SQL, protobuf         |
+| Arrow     | apache-arrow npm package           |
+| Build     | TypeScript compiler                |
+| Test      | Bun test runner, Playwright        |
+| Docs      | TypeDoc                            |
+
+### Modules
 
 | Module                  | Purpose                                     |
 | ----------------------- | ------------------------------------------- |
