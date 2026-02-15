@@ -1,5 +1,8 @@
 # Arrow Flight SQL JS
 
+![CI](https://github.com/qualithm/arrow-flight-sql-js/actions/workflows/ci.yaml/badge.svg)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
 > 📦 **Package:** `@qualithm/arrow-flight-sql-js`
