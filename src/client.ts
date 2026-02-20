@@ -17,6 +17,15 @@ import {
   ActionClosePreparedStatementRequest,
   ActionCreatePreparedStatementRequest,
   ActionCreatePreparedStatementResult,
+  CommandGetCatalogs,
+  CommandGetDbSchemas,
+  CommandGetExportedKeys,
+  CommandGetImportedKeys,
+  CommandGetPrimaryKeys,
+  CommandGetSqlInfo,
+  CommandGetTables,
+  CommandGetTableTypes,
+  CommandGetXdbcTypeInfo,
   CommandPreparedStatementQuery,
   CommandPreparedStatementUpdate,
   CommandStatementQuery,
@@ -689,6 +698,294 @@ export class FlightSqlClient extends FlightClient {
         ? Buffer.from(bindResult.preparedStatementHandle)
         : undefined
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Metadata Queries
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Retrieves the list of catalogs (databases) available on the server.
+   *
+   * @param options - Optional call options
+   * @returns Flight information for retrieving catalog data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * const info = await client.getCatalogs()
+   * const table = await flightInfoToTable(client, info)
+   * for (const row of table) {
+   *   console.log("Catalog:", row.catalog_name)
+   * }
+   * ```
+   */
+  async getCatalogs(options?: CallOptions): Promise<FlightInfo> {
+    const command: CommandGetCatalogs = {}
+    const encoded = CommandGetCatalogs.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetCatalogs", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the list of database schemas.
+   *
+   * @param options - Optional filtering and call options
+   * @returns Flight information for retrieving schema data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * // Get all schemas
+   * const info = await client.getDbSchemas()
+   *
+   * // Get schemas in a specific catalog
+   * const info = await client.getDbSchemas({ catalog: "my_database" })
+   *
+   * // Get schemas matching a pattern
+   * const info = await client.getDbSchemas({ dbSchemaFilterPattern: "public%" })
+   * ```
+   */
+  async getDbSchemas(
+    options?: CallOptions & {
+      catalog?: string
+      dbSchemaFilterPattern?: string
+    }
+  ): Promise<FlightInfo> {
+    const command: CommandGetDbSchemas = {
+      catalog: options?.catalog,
+      dbSchemaFilterPattern: options?.dbSchemaFilterPattern
+    }
+    const encoded = CommandGetDbSchemas.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetDbSchemas", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the list of tables.
+   *
+   * @param options - Optional filtering and call options
+   * @returns Flight information for retrieving table data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * // Get all tables
+   * const info = await client.getTables()
+   *
+   * // Get tables with schema information
+   * const info = await client.getTables({ includeSchema: true })
+   *
+   * // Get only views
+   * const info = await client.getTables({ tableTypes: ["VIEW"] })
+   *
+   * // Get tables matching a pattern in a specific schema
+   * const info = await client.getTables({
+   *   dbSchemaFilterPattern: "public",
+   *   tableNameFilterPattern: "user%"
+   * })
+   * ```
+   */
+  async getTables(
+    options?: CallOptions & {
+      catalog?: string
+      dbSchemaFilterPattern?: string
+      tableNameFilterPattern?: string
+      tableTypes?: string[]
+      includeSchema?: boolean
+    }
+  ): Promise<FlightInfo> {
+    const command: CommandGetTables = {
+      catalog: options?.catalog,
+      dbSchemaFilterPattern: options?.dbSchemaFilterPattern,
+      tableNameFilterPattern: options?.tableNameFilterPattern,
+      tableTypes: options?.tableTypes ?? [],
+      includeSchema: options?.includeSchema ?? false
+    }
+    const encoded = CommandGetTables.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetTables", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the list of table types supported by the server.
+   *
+   * Common table types include TABLE, VIEW, and SYSTEM TABLE.
+   *
+   * @param options - Optional call options
+   * @returns Flight information for retrieving table type data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * const info = await client.getTableTypes()
+   * const table = await flightInfoToTable(client, info)
+   * for (const row of table) {
+   *   console.log("Table type:", row.table_type)
+   * }
+   * ```
+   */
+  async getTableTypes(options?: CallOptions): Promise<FlightInfo> {
+    const command: CommandGetTableTypes = {}
+    const encoded = CommandGetTableTypes.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetTableTypes", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the primary keys for a table.
+   *
+   * @param table - The table name to get primary keys for
+   * @param options - Optional filtering and call options
+   * @returns Flight information for retrieving primary key data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * const info = await client.getPrimaryKeys("users", {
+   *   catalog: "my_database",
+   *   dbSchema: "public"
+   * })
+   * const table = await flightInfoToTable(client, info)
+   * for (const row of table) {
+   *   console.log("Primary key column:", row.column_name)
+   * }
+   * ```
+   */
+  async getPrimaryKeys(
+    table: string,
+    options?: CallOptions & {
+      catalog?: string
+      dbSchema?: string
+    }
+  ): Promise<FlightInfo> {
+    const command: CommandGetPrimaryKeys = {
+      table,
+      catalog: options?.catalog,
+      dbSchema: options?.dbSchema
+    }
+    const encoded = CommandGetPrimaryKeys.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetPrimaryKeys", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the exported keys (foreign keys that reference this table's primary key).
+   *
+   * @param table - The table name to get exported keys for
+   * @param options - Optional filtering and call options
+   * @returns Flight information for retrieving exported key data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * const info = await client.getExportedKeys("users")
+   * const table = await flightInfoToTable(client, info)
+   * for (const row of table) {
+   *   console.log(`${row.fk_table_name}.${row.fk_column_name} -> ${row.pk_column_name}`)
+   * }
+   * ```
+   */
+  async getExportedKeys(
+    table: string,
+    options?: CallOptions & {
+      catalog?: string
+      dbSchema?: string
+    }
+  ): Promise<FlightInfo> {
+    const command: CommandGetExportedKeys = {
+      table,
+      catalog: options?.catalog,
+      dbSchema: options?.dbSchema
+    }
+    const encoded = CommandGetExportedKeys.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetExportedKeys", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the imported keys (foreign keys in this table that reference other tables).
+   *
+   * @param table - The table name to get imported keys for
+   * @param options - Optional filtering and call options
+   * @returns Flight information for retrieving imported key data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * const info = await client.getImportedKeys("orders")
+   * const table = await flightInfoToTable(client, info)
+   * for (const row of table) {
+   *   console.log(`${row.fk_column_name} -> ${row.pk_table_name}.${row.pk_column_name}`)
+   * }
+   * ```
+   */
+  async getImportedKeys(
+    table: string,
+    options?: CallOptions & {
+      catalog?: string
+      dbSchema?: string
+    }
+  ): Promise<FlightInfo> {
+    const command: CommandGetImportedKeys = {
+      table,
+      catalog: options?.catalog,
+      dbSchema: options?.dbSchema
+    }
+    const encoded = CommandGetImportedKeys.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetImportedKeys", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves SQL information about the server's capabilities.
+   *
+   * @param info - Array of SqlInfo codes to retrieve; if empty, returns all
+   * @param options - Optional call options
+   * @returns Flight information for retrieving SQL info data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * // Get all SQL info
+   * const info = await client.getSqlInfo()
+   *
+   * // Get specific info (use SqlInfo enum values)
+   * const info = await client.getSqlInfo([0, 1, 2])  // server name, version, arrow version
+   * ```
+   */
+  async getSqlInfo(info?: number[], options?: CallOptions): Promise<FlightInfo> {
+    const command: CommandGetSqlInfo = {
+      info: info ?? []
+    }
+    const encoded = CommandGetSqlInfo.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetSqlInfo", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves information about data types supported by the server.
+   *
+   * @param options - Optional data type filter and call options
+   * @returns Flight information for retrieving type info data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * // Get all type info
+   * const info = await client.getXdbcTypeInfo()
+   *
+   * // Get info for a specific data type
+   * const info = await client.getXdbcTypeInfo({ dataType: 12 })  // VARCHAR
+   * ```
+   */
+  async getXdbcTypeInfo(options?: CallOptions & { dataType?: number }): Promise<FlightInfo> {
+    const command: CommandGetXdbcTypeInfo = {
+      dataType: options?.dataType
+    }
+    const encoded = CommandGetXdbcTypeInfo.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetXdbcTypeInfo", encoded)
+    return this.getFlightInfo(descriptor, options)
   }
 }
 

@@ -110,4 +110,87 @@ describe("FlightSqlClient", () => {
       expect(typeof client.bindParameters).toBe("function")
     })
   })
+
+  describe("metadata methods", () => {
+    test("has getCatalogs method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getCatalogs).toBe("function")
+    })
+
+    test("has getDbSchemas method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getDbSchemas).toBe("function")
+    })
+
+    test("has getTables method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getTables).toBe("function")
+    })
+
+    test("has getTableTypes method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getTableTypes).toBe("function")
+    })
+
+    test("has getPrimaryKeys method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getPrimaryKeys).toBe("function")
+    })
+
+    test("has getExportedKeys method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getExportedKeys).toBe("function")
+    })
+
+    test("has getImportedKeys method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getImportedKeys).toBe("function")
+    })
+
+    test("has getSqlInfo method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getSqlInfo).toBe("function")
+    })
+
+    test("has getXdbcTypeInfo method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getXdbcTypeInfo).toBe("function")
+    })
+  })
 })

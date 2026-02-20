@@ -155,14 +155,14 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M4: Metadata Queries
 
-- [ ] Implement `CommandGetCatalogs`
-- [ ] Implement `CommandGetDbSchemas`
-- [ ] Implement `CommandGetTables`
-- [ ] Implement `CommandGetTableTypes`
-- [ ] Implement `CommandGetPrimaryKeys`
-- [ ] Implement `CommandGetExportedKeys` / `CommandGetImportedKeys`
-- [ ] Implement `CommandGetSqlInfo`
-- [ ] Implement `CommandGetXdbcTypeInfo`
+- [x] Implement `CommandGetCatalogs`
+- [x] Implement `CommandGetDbSchemas`
+- [x] Implement `CommandGetTables`
+- [x] Implement `CommandGetTableTypes`
+- [x] Implement `CommandGetPrimaryKeys`
+- [x] Implement `CommandGetExportedKeys` / `CommandGetImportedKeys`
+- [x] Implement `CommandGetSqlInfo`
+- [x] Implement `CommandGetXdbcTypeInfo`
 
 ### M5: Transactions & Polish
 
