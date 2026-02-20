@@ -9,7 +9,9 @@
 
 // Client
 export type {
+  BindParametersResult,
   FlightSqlClientOptions,
+  ParameterData,
   PreparedStatementOptions,
   PreparedStatementResult,
   QueryOptions,

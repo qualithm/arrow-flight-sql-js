@@ -21,6 +21,7 @@ import {
   CommandPreparedStatementUpdate,
   CommandStatementQuery,
   CommandStatementUpdate,
+  DoPutPreparedStatementResult,
   DoPutUpdateResult
 } from "./generated/arrow/flight/protocol/sql/FlightSql.js"
 
@@ -96,6 +97,37 @@ export type PreparedStatementResult = {
    * May be empty if the query has no parameters.
    */
   parameterSchema: Buffer
+}
+
+/**
+ * Result of binding parameters to a prepared statement.
+ */
+export type BindParametersResult = {
+  /**
+   * Updated handle for the prepared statement.
+   * If provided, this handle should be used for subsequent operations
+   * instead of the original handle. If undefined, continue using the
+   * original handle.
+   */
+  handle?: Buffer
+}
+
+/**
+ * Parameter data for binding to a prepared statement.
+ * Can be provided as raw Arrow IPC bytes or as separate schema/data components.
+ */
+export type ParameterData = {
+  /**
+   * Arrow IPC schema message bytes.
+   * Required when sending parameters.
+   */
+  schema: Uint8Array
+
+  /**
+   * Arrow IPC record batch data bytes.
+   * Contains the actual parameter values.
+   */
+  data: Uint8Array
 }
 
 /**
@@ -566,6 +598,96 @@ export class FlightSqlClient extends FlightClient {
     // Execute the action - no result expected
     for await (const _ of this.doAction(action, options)) {
       // Consume any results (usually none for close)
+    }
+  }
+
+  /**
+   * Binds parameter values to a prepared statement.
+   *
+   * Parameter values are sent as Arrow IPC data matching the parameter schema
+   * from the prepared statement. After binding, call `executePreparedQuery()`
+   * or `executePreparedUpdate()` to execute with the bound parameters.
+   *
+   * @param handle - The prepared statement handle
+   * @param parameters - The parameter data as Arrow IPC bytes
+   * @param options - Optional call options
+   * @returns Result containing an optional updated handle
+   * @throws {FlightError} If binding fails
+   *
+   * @example
+   * ```ts
+   * import { tableToIPC, tableFromArrays } from "apache-arrow"
+   *
+   * const prepared = await client.createPreparedStatement(
+   *   "SELECT * FROM users WHERE id = ?"
+   * )
+   *
+   * // Create parameter data as Arrow IPC
+   * const params = tableFromArrays({ id: [42] })
+   * const ipcData = tableToIPC(params)
+   *
+   * // Bind the parameters
+   * const result = await client.bindParameters(prepared.handle, {
+   *   schema: ipcData.slice(0, schemaLength),  // Extract schema bytes
+   *   data: ipcData.slice(schemaLength)         // Extract data bytes
+   * })
+   *
+   * // Use updated handle if provided
+   * const handle = result.handle ?? prepared.handle
+   *
+   * // Execute and retrieve results
+   * const info = await client.executePreparedQuery(handle)
+   * ```
+   */
+  async bindParameters(
+    handle: Buffer,
+    parameters: ParameterData,
+    options?: CallOptions
+  ): Promise<BindParametersResult> {
+    const command: CommandPreparedStatementQuery = {
+      preparedStatementHandle: handle
+    }
+
+    const encoded = CommandPreparedStatementQuery.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandPreparedStatementQuery", encoded)
+
+    const stream = this.doPut(options)
+
+    // Send the command with schema in the first message
+    stream.write({
+      flightDescriptor: {
+        type: 2, // CMD
+        path: [],
+        cmd: descriptor.cmd
+      },
+      dataHeader: Buffer.from(parameters.schema),
+      appMetadata: Buffer.alloc(0),
+      dataBody: Buffer.from(parameters.data)
+    })
+
+    stream.end()
+
+    // Collect results
+    const results = await stream.collectResults()
+    const firstResult = results.at(0)
+
+    // Server may not return any result (legacy behavior)
+    if (!firstResult || firstResult.appMetadata.length === 0) {
+      return {}
+    }
+
+    // Decode the DoPutPreparedStatementResult from appMetadata
+    const anyBytes = unpackAny(firstResult.appMetadata)
+    if (anyBytes.length === 0) {
+      return {}
+    }
+
+    const bindResult = DoPutPreparedStatementResult.decode(anyBytes)
+
+    return {
+      handle: bindResult.preparedStatementHandle
+        ? Buffer.from(bindResult.preparedStatementHandle)
+        : undefined
     }
   }
 }

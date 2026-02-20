@@ -100,5 +100,14 @@ describe("FlightSqlClient", () => {
 
       expect(typeof client.executePreparedUpdate).toBe("function")
     })
+
+    test("has bindParameters method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.bindParameters).toBe("function")
+    })
   })
 })
