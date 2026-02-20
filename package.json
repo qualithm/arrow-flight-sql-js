@@ -64,10 +64,10 @@
   },
   "dependencies": {},
   "peerDependencies": {
-    "@qualithm/arrow-flight-js": "1.1.0"
+    "@qualithm/arrow-flight-js": "1.2.0"
   },
   "devDependencies": {
-    "@qualithm/arrow-flight-js": "1.1.0",
+    "@qualithm/arrow-flight-js": "1.2.0",
     "@eslint/js": "10.0.1",
     "grpc-tools": "1.13.1",
     "ts-proto": "2.11.2",
