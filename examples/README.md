@@ -31,11 +31,11 @@ bun run examples/error-handling.ts
 
 ### [basic-query.ts](basic-query.ts)
 
-Simple query execution returning results as an Arrow Table. Demonstrates:
+Connecting to a Flight SQL server and executing queries. Demonstrates:
 
-- Connecting to a Flight SQL server
-- Executing a query with `queryToTable()`
-- Iterating over results
+- Simple SELECT queries with `queryToTable()`
+- Schema inspection
+- Row iteration patterns
 
 ### [authentication.ts](authentication.ts)
 

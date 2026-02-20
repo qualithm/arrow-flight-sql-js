@@ -17,25 +17,25 @@ async function main(): Promise<void> {
   console.log("=== Authentication Examples ===\n")
 
   // Basic authentication patterns
-  console.log("--- No Authentication (development) ---")
+  console.log("--- Example 1: No Authentication ---")
   await withNoAuth()
 
-  console.log("\n--- Basic Authentication ---")
+  console.log("\n--- Example 2: Basic Authentication ---")
   await withBasicAuth()
 
-  console.log("\n--- Bearer Token Authentication ---")
+  console.log("\n--- Example 3: Bearer Token ---")
   await withBearerAuth()
 
   // TLS connection patterns
   console.log("\n=== TLS Connection Examples ===\n")
 
-  console.log("--- TLS with System CA ---")
+  console.log("--- Example 4: TLS with System CA ---")
   await withTLS()
 
-  console.log("\n--- TLS with Custom CA ---")
+  console.log("\n--- Example 5: TLS with Custom CA ---")
   await withCustomCA()
 
-  console.log("\n--- Mutual TLS (mTLS) ---")
+  console.log("\n--- Example 6: Mutual TLS (mTLS) ---")
   await withMutualTLS()
 }
 

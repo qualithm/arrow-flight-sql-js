@@ -11,6 +11,8 @@
 import { createFlightSqlClient, FlightError, FlightSqlError } from "../src/index.js"
 
 async function main(): Promise<void> {
+  console.log("=== Error Handling Examples ===\n")
+
   const client = await createFlightSqlClient({
     host: "localhost",
     port: 8815,

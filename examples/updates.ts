@@ -12,17 +12,19 @@
 import { createFlightSqlClient } from "../src/index.js"
 
 async function main(): Promise<void> {
+  console.log("=== Update Operations Examples ===\n")
+
   const client = await createFlightSqlClient({
     host: "localhost",
     port: 8815,
     tls: false
   })
 
-  console.log("Connected to Flight SQL server")
+  console.log("Connected to Flight SQL server\n")
 
   try {
     // Example 1: INSERT statement
-    console.log("\n--- Example 1: INSERT ---")
+    console.log("--- Example 1: INSERT ---")
     const insertResult = await client.executeUpdate(
       "INSERT INTO users (name, email, active) VALUES ('Alice', 'alice@example.com', true)"
     )

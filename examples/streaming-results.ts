@@ -12,25 +12,27 @@
 import { createFlightSqlClient, iterateResults, ticketToTable } from "../src/index.js"
 
 async function main(): Promise<void> {
+  console.log("=== Streaming Results Examples ===\n")
+
   const client = await createFlightSqlClient({
     host: "localhost",
     port: 8815,
     tls: false
   })
 
-  console.log("Connected to Flight SQL server")
+  console.log("Connected to Flight SQL server\n")
 
   try {
     // Get flight info first (useful for inspection)
     const info = await client.query("SELECT * FROM large_table")
 
-    console.log("\nFlight Info:")
+    console.log("Flight Info:")
     console.log(`  Total records: ${String(info.totalRecords)}`)
     console.log(`  Total bytes: ${String(info.totalBytes)}`)
     console.log(`  Endpoints: ${String(info.endpoint.length)}`)
 
-    // Option 1: Stream results batch by batch
-    console.log("\n--- Option 1: Stream by Batch ---")
+    // Example 1: Stream results batch by batch
+    console.log("\n--- Example 1: Stream by Batch ---")
     let batchCount = 0
     let totalBytes = 0
 
@@ -44,10 +46,10 @@ async function main(): Promise<void> {
 
     console.log(`  Total: ${String(batchCount)} batches, ${String(totalBytes)} bytes`)
 
-    // Option 2: Fetch individual endpoints using ticketToTable
+    // Example 2: Fetch individual endpoints using ticketToTable
     // This is useful when endpoints are distributed across multiple servers
     // or when you want to process specific partitions
-    console.log("\n--- Option 2: Fetch Individual Endpoints ---")
+    console.log("\n--- Example 2: Fetch Endpoints ---")
     for (let i = 0; i < info.endpoint.length; i++) {
       const endpoint = info.endpoint[i]
 
@@ -75,9 +77,9 @@ async function main(): Promise<void> {
       }
     }
 
-    // Option 3: Parallel endpoint fetching for distributed queries
+    // Example 3: Parallel endpoint fetching for distributed queries
     // When endpoints are on different servers, fetch in parallel
-    console.log("\n--- Option 3: Parallel Endpoint Fetching ---")
+    console.log("\n--- Example 3: Parallel Fetching ---")
     const ticketsToFetch = info.endpoint
       .filter(
         (ep): ep is typeof ep & { ticket: NonNullable<typeof ep.ticket> } => ep.ticket !== undefined
@@ -100,9 +102,9 @@ async function main(): Promise<void> {
       console.log("  Only one endpoint, parallel fetch not needed")
     }
 
-    // Option 4: Cancel a query before fetching all results
+    // Example 4: Cancel a query before fetching all results
     // Useful for timeouts, user cancellation, or application shutdown
-    console.log("\n--- Option 4: Query Cancellation ---")
+    console.log("\n--- Example 4: Query Cancellation ---")
     const cancelInfo = await client.query("SELECT * FROM large_table")
     console.log(`  Started query (${String(cancelInfo.totalRecords)} records)`)
 
@@ -113,6 +115,7 @@ async function main(): Promise<void> {
     // const table = await flightInfoToTable(client, info) // Loads everything into memory
   } finally {
     client.close()
+    console.log("\nConnection closed")
   }
 }
 
