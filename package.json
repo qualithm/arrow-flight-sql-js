@@ -54,6 +54,7 @@
     "lint:fix": "eslint --fix .",
     "lint": "eslint .",
     "prepublishOnly": "bun run clean && bun run build",
+    "proto:generate": "grpc_tools_node_protoc --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto --proto_path=./proto --ts_proto_out=./src/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,importSuffix=.js,env=node,useExactTypes=false,snakeToCamel=true,outputPartialMethods=true,enumsAsLiterals=true proto/arrow/flight/protocol/sql/FlightSql.proto",
     "start": "bun run src/index.ts",
     "test:coverage": "bun test --coverage",
     "test:unit": "bun test src/__tests__/unit",
@@ -62,8 +63,14 @@
     "typecheck": "tsc -p tsconfig.node.json --noEmit"
   },
   "dependencies": {},
+  "peerDependencies": {
+    "@qualithm/arrow-flight-js": "1.1.0"
+  },
   "devDependencies": {
+    "@qualithm/arrow-flight-js": "1.1.0",
     "@eslint/js": "10.0.1",
+    "grpc-tools": "1.13.1",
+    "ts-proto": "2.11.2",
     "@types/bun": "1.3.9",
     "eslint": "10.0.0",
     "eslint-plugin-simple-import-sort": "12.1.1",
