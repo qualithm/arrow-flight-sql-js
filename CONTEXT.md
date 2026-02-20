@@ -171,6 +171,16 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 - [ ] Add comprehensive error handling
 - [ ] Documentation and examples
 
+### M6: Testing Infrastructure
+
+- [ ] Add Docker Compose with Arrow Flight SQL test server
+- [ ] Create integration test suite (query, update, prepared statements, metadata)
+- [ ] Run tests on Bun (unit + integration)
+- [ ] Run tests on Node.js (unit + integration)
+- [ ] Run tests on Deno (unit + integration)
+- [ ] Enable coverage reporting with threshold enforcement
+- [ ] Add test fixtures for Arrow schemas/data
+
 ---
 
 ## Learnings
