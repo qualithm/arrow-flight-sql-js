@@ -104,7 +104,7 @@ jobs:
         run: bun run build
       - name: Verify module loads in Node.js
         run: |
-          node --input-type=module -e "import { greet } from './dist/index.js'; console.log(greet({ name: 'Node.js' }))"
+          node --input-type=module -e "import { createFlightSqlClient } from './dist/index.js'; console.log('Node.js:', typeof createFlightSqlClient)"
       - name: Report Node.js version
         run: node --version
 
@@ -126,7 +126,7 @@ jobs:
         run: bun run build
       - name: Verify module loads in Deno
         run: |
-          deno eval "import { greet } from './dist/index.js'; console.log(greet({ name: 'Deno' }))"
+          deno eval "import { createFlightSqlClient } from './dist/index.js'; console.log('Deno:', typeof createFlightSqlClient)"
       - name: Report Deno version
         run: deno --version
 
