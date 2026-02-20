@@ -14,29 +14,14 @@ client.
 # Basic query execution
 bun run examples/basic-query.ts
 
-# Authentication patterns
+# Authentication and TLS connections
 bun run examples/authentication.ts
-
-# TLS/mTLS connections (production)
-bun run examples/tls-connection.ts
 
 # INSERT, UPDATE, DELETE operations
 bun run examples/updates.ts
 
-# Streaming large result sets
+# Streaming large result sets and cancellation
 bun run examples/streaming-results.ts
-
-# Prepared statements
-bun run examples/prepared-statements.ts
-
-# Transaction handling
-bun run examples/transactions.ts
-
-# Database metadata queries
-bun run examples/metadata-queries.ts
-
-# Query cancellation
-bun run examples/cancellation.ts
 
 # Error handling patterns
 bun run examples/error-handling.ts
@@ -54,21 +39,14 @@ Simple query execution returning results as an Arrow Table. Demonstrates:
 
 ### [authentication.ts](authentication.ts)
 
-Different authentication methods for connecting. Demonstrates:
+Authentication methods and TLS configurations. Demonstrates:
 
 - No authentication (local development)
 - Basic authentication (username/password)
 - Bearer token authentication (JWT/OAuth)
-- Two-step connection pattern
-
-### [tls-connection.ts](tls-connection.ts)
-
-TLS and mTLS connections for production environments. Demonstrates:
-
 - TLS with system CA certificates
 - Custom CA certificates for self-signed/private CAs
 - Mutual TLS (mTLS) with client certificates
-- Certificate verification options
 
 ### [updates.ts](updates.ts)
 
@@ -81,53 +59,14 @@ Executing data modification statements. Demonstrates:
 
 ### [streaming-results.ts](streaming-results.ts)
 
-Processing large result sets without loading everything into memory. Demonstrates:
+Processing large result sets and managing queries. Demonstrates:
 
 - Getting FlightInfo metadata before fetching data
 - Streaming results with `iterateResults()`
 - Processing batches incrementally
 - Fetching individual endpoints with `ticketToTable()`
 - Parallel endpoint fetching for distributed queries
-
-### [prepared-statements.ts](prepared-statements.ts)
-
-Creating and executing prepared statements with parameter binding. Demonstrates:
-
-- Creating prepared statements with `createPreparedStatement()`
-- Inspecting parameter and dataset schemas
-- Building Arrow IPC parameter data
-- Binding parameters with `bindParameters()`
-- Re-executing with different parameter values
-- Creating prepared statements within transactions
-- Cleaning up with `closePreparedStatement()`
-
-### [transactions.ts](transactions.ts)
-
-Atomic operations with transactions. Demonstrates:
-
-- Beginning transactions with `beginTransaction()`
-- Executing updates within a transaction
-- Querying uncommitted changes with `query()` and `transactionId`
-- Committing with `commit()`
-- Rolling back with `rollback()` on error
-
-### [metadata-queries.ts](metadata-queries.ts)
-
-Querying database metadata. Demonstrates:
-
-- Listing catalogs, schemas, and tables
-- Getting table types
-- Querying primary and foreign keys
-- Getting server SQL capabilities
-- Getting supported data types
-
-### [cancellation.ts](cancellation.ts)
-
-Cancelling long-running queries. Demonstrates:
-
-- Starting a query and getting FlightInfo
-- Cancelling before fetching results with `cancelFlightInfo()`
-- Handling different cancellation statuses
+- Cancelling queries with `cancelFlightInfo()`
 
 ### [error-handling.ts](error-handling.ts)
 

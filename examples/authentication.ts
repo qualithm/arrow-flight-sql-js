@@ -1,34 +1,42 @@
 /**
- * Authentication example.
+ * Authentication and TLS connections example.
  *
- * Demonstrates different authentication methods for connecting
- * to a Flight SQL server.
+ * Demonstrates different authentication methods and TLS configurations
+ * for connecting to a Flight SQL server.
  *
  * @example
  * ```bash
  * bun run examples/authentication.ts
  * ```
  */
-import { createFlightSqlClient, FlightSqlClient } from "../src/index.js"
+import { readFileSync } from "node:fs"
+
+import { createFlightSqlClient } from "../src/index.js"
 
 async function main(): Promise<void> {
   console.log("=== Authentication Examples ===\n")
 
-  // Example 1: No authentication (for local development)
-  console.log("--- Example 1: No Authentication ---")
+  // Basic authentication patterns
+  console.log("--- No Authentication (development) ---")
   await withNoAuth()
 
-  // Example 2: Basic authentication (username/password)
-  console.log("\n--- Example 2: Basic Authentication ---")
+  console.log("\n--- Basic Authentication ---")
   await withBasicAuth()
 
-  // Example 3: Bearer token authentication
-  console.log("\n--- Example 3: Bearer Token Authentication ---")
+  console.log("\n--- Bearer Token Authentication ---")
   await withBearerAuth()
 
-  // Example 4: Two-step connection (create then connect)
-  console.log("\n--- Example 4: Two-Step Connection ---")
-  await twoStepConnection()
+  // TLS connection patterns
+  console.log("\n=== TLS Connection Examples ===\n")
+
+  console.log("--- TLS with System CA ---")
+  await withTLS()
+
+  console.log("\n--- TLS with Custom CA ---")
+  await withCustomCA()
+
+  console.log("\n--- Mutual TLS (mTLS) ---")
+  await withMutualTLS()
 }
 
 async function withNoAuth(): Promise<void> {
@@ -47,7 +55,6 @@ async function withNoAuth(): Promise<void> {
 
 async function withBasicAuth(): Promise<void> {
   // Basic authentication with username and password
-  // The credentials are sent with each request
   try {
     const client = await createFlightSqlClient({
       host: "localhost",
@@ -62,7 +69,6 @@ async function withBasicAuth(): Promise<void> {
 
     console.log("  Connected with basic auth")
     client.close()
-    console.log("  Connection closed")
   } catch (error) {
     console.log("  Connection failed (expected if server doesn't support basic auth)")
     console.log("  Error:", error instanceof Error ? error.message : error)
@@ -70,8 +76,7 @@ async function withBasicAuth(): Promise<void> {
 }
 
 async function withBearerAuth(): Promise<void> {
-  // Bearer token authentication
-  // Commonly used with OAuth2 or JWT tokens
+  // Bearer token authentication (OAuth2/JWT)
   try {
     const client = await createFlightSqlClient({
       host: "localhost",
@@ -85,29 +90,74 @@ async function withBearerAuth(): Promise<void> {
 
     console.log("  Connected with bearer token")
     client.close()
-    console.log("  Connection closed")
   } catch (error) {
     console.log("  Connection failed (expected if server doesn't support bearer auth)")
     console.log("  Error:", error instanceof Error ? error.message : error)
   }
 }
 
-async function twoStepConnection(): Promise<void> {
-  // Two-step connection: create client first, then connect
-  // Useful when you need to configure the client before connecting
-  const client = new FlightSqlClient({
-    host: "localhost",
-    port: 8815,
-    tls: false
-  })
+async function withTLS(): Promise<void> {
+  // TLS connection using system-installed CA certificates
+  // Works for servers with certificates signed by public CAs
+  try {
+    const client = await createFlightSqlClient({
+      host: "flight-sql.example.com",
+      port: 443,
+      tls: true
+    })
 
-  console.log("  Client created (not yet connected)")
+    console.log("  Connected with TLS (system CAs)")
+    client.close()
+  } catch (error) {
+    console.log("  Connection failed (expected if server not available)")
+    console.log("  Error:", error instanceof Error ? error.message : error)
+  }
+}
 
-  await client.connect()
-  console.log("  Now connected")
+async function withCustomCA(): Promise<void> {
+  // TLS with custom CA certificate for self-signed or private CAs
+  try {
+    const caCert = readFileSync("/path/to/ca-certificate.pem")
 
-  client.close()
-  console.log("  Connection closed")
+    const client = await createFlightSqlClient({
+      host: "internal-flight-sql.company.local",
+      port: 8815,
+      tls: {
+        rootCerts: caCert
+      }
+    })
+
+    console.log("  Connected with custom CA certificate")
+    client.close()
+  } catch (error) {
+    console.log("  Connection failed (expected if cert file not found)")
+    console.log("  Error:", error instanceof Error ? error.message : error)
+  }
+}
+
+async function withMutualTLS(): Promise<void> {
+  // Mutual TLS (mTLS) - server verifies client certificate
+  try {
+    const caCert = readFileSync("/path/to/ca-certificate.pem")
+    const clientCert = readFileSync("/path/to/client-certificate.pem")
+    const clientKey = readFileSync("/path/to/client-key.pem")
+
+    const client = await createFlightSqlClient({
+      host: "secure-flight-sql.company.local",
+      port: 8815,
+      tls: {
+        rootCerts: caCert,
+        certChain: clientCert,
+        privateKey: clientKey
+      }
+    })
+
+    console.log("  Connected with mutual TLS (mTLS)")
+    client.close()
+  } catch (error) {
+    console.log("  Connection failed (expected if cert files not found)")
+    console.log("  Error:", error instanceof Error ? error.message : error)
+  }
 }
 
 main().catch(console.error)

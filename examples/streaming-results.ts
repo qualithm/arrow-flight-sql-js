@@ -1,8 +1,8 @@
 /**
- * Streaming results example.
+ * Streaming results and cancellation example.
  *
  * Demonstrates processing large result sets without loading
- * everything into memory at once, and fetching individual endpoints.
+ * everything into memory, and cancelling long-running queries.
  *
  * @example
  * ```bash
@@ -99,6 +99,15 @@ async function main(): Promise<void> {
     } else {
       console.log("  Only one endpoint, parallel fetch not needed")
     }
+
+    // Option 4: Cancel a query before fetching all results
+    // Useful for timeouts, user cancellation, or application shutdown
+    console.log("\n--- Option 4: Query Cancellation ---")
+    const cancelInfo = await client.query("SELECT * FROM large_table")
+    console.log(`  Started query (${String(cancelInfo.totalRecords)} records)`)
+
+    const cancelResult = await client.cancelFlightInfo(cancelInfo)
+    console.log(`  Cancellation result: ${cancelResult}`)
 
     // Note: For very large datasets, prefer iterateResults to avoid memory issues
     // const table = await flightInfoToTable(client, info) // Loads everything into memory
