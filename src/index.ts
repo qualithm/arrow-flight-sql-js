@@ -15,6 +15,8 @@ export type {
   PreparedStatementOptions,
   PreparedStatementResult,
   QueryOptions,
+  TransactionAction,
+  TransactionResult,
   UpdateResult
 } from "./client.js"
 export { createFlightSqlClient, FlightSqlClient } from "./client.js"

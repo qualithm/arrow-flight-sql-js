@@ -14,9 +14,13 @@ import {
 } from "@qualithm/arrow-flight-js"
 
 import {
+  ActionBeginTransactionRequest,
+  ActionBeginTransactionResult,
   ActionClosePreparedStatementRequest,
   ActionCreatePreparedStatementRequest,
   ActionCreatePreparedStatementResult,
+  ActionEndTransactionRequest,
+  ActionEndTransactionRequest_EndTransaction,
   CommandGetCatalogs,
   CommandGetDbSchemas,
   CommandGetExportedKeys,
@@ -44,6 +48,8 @@ const TYPE_URL_PREFIX = "type.googleapis.com/arrow.flight.protocol.sql"
  */
 const ACTION_CREATE_PREPARED_STATEMENT = "CreatePreparedStatement"
 const ACTION_CLOSE_PREPARED_STATEMENT = "ClosePreparedStatement"
+const ACTION_BEGIN_TRANSACTION = "BeginTransaction"
+const ACTION_END_TRANSACTION = "EndTransaction"
 
 /**
  * Options for creating a FlightSqlClient.
@@ -138,6 +144,22 @@ export type ParameterData = {
    */
   data: Uint8Array
 }
+
+/**
+ * Result of beginning a transaction.
+ */
+export type TransactionResult = {
+  /**
+   * Opaque handle for the transaction on the server.
+   * Use this handle with query/update operations and commit/rollback.
+   */
+  transactionId: Buffer
+}
+
+/**
+ * Transaction end action.
+ */
+export type TransactionAction = "commit" | "rollback"
 
 /**
  * Encodes a Flight SQL command as a descriptor command buffer.
@@ -986,6 +1008,164 @@ export class FlightSqlClient extends FlightClient {
     const encoded = CommandGetXdbcTypeInfo.encode(command).finish()
     const descriptor = createCommandDescriptor("CommandGetXdbcTypeInfo", encoded)
     return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Begins a new transaction.
+   *
+   * Returns a transaction ID that can be passed to query, update, and
+   * prepared statement operations to execute them within the transaction.
+   * Call `commit()` or `rollback()` to end the transaction.
+   *
+   * @param options - Optional call options
+   * @returns The transaction result containing the transaction ID
+   * @throws {FlightError} If the server does not support transactions or the request fails
+   *
+   * @example
+   * ```ts
+   * const txn = await client.beginTransaction()
+   *
+   * try {
+   *   await client.executeUpdate(
+   *     "INSERT INTO users (name) VALUES ('Alice')",
+   *     { transactionId: txn.transactionId }
+   *   )
+   *   await client.executeUpdate(
+   *     "UPDATE accounts SET balance = balance - 100 WHERE user = 'Alice'",
+   *     { transactionId: txn.transactionId }
+   *   )
+   *   await client.commit(txn.transactionId)
+   * } catch (error) {
+   *   await client.rollback(txn.transactionId)
+   *   throw error
+   * }
+   * ```
+   */
+  async beginTransaction(options?: CallOptions): Promise<TransactionResult> {
+    const request: ActionBeginTransactionRequest = {}
+
+    const encoded = ActionBeginTransactionRequest.encode(request).finish()
+    const typeUrl = `${TYPE_URL_PREFIX}.ActionBeginTransactionRequest`
+    const body = packAny(typeUrl, encoded)
+
+    const action = {
+      type: ACTION_BEGIN_TRANSACTION,
+      body
+    }
+
+    // Execute the action and collect the first result
+    let resultBody: Buffer | undefined
+
+    for await (const result of this.doAction(action, options)) {
+      resultBody = result.body
+      break
+    }
+
+    if (!resultBody || resultBody.length === 0) {
+      throw new FlightError("no result returned from begin transaction", "INTERNAL")
+    }
+
+    // Unpack the Any message and decode the result
+    const valueBytes = unpackAny(resultBody)
+    const txnResult = ActionBeginTransactionResult.decode(valueBytes)
+
+    return {
+      transactionId: Buffer.from(txnResult.transactionId)
+    }
+  }
+
+  /**
+   * Ends a transaction with the specified action.
+   *
+   * This is a lower-level method. Consider using `commit()` or `rollback()`
+   * for more readable code.
+   *
+   * @param transactionId - The transaction ID from beginTransaction
+   * @param action - Whether to commit or rollback the transaction
+   * @param options - Optional call options
+   * @throws {FlightError} If the request fails
+   */
+  async endTransaction(
+    transactionId: Buffer,
+    action: TransactionAction,
+    options?: CallOptions
+  ): Promise<void> {
+    const endAction =
+      action === "commit"
+        ? ActionEndTransactionRequest_EndTransaction.END_TRANSACTION_COMMIT
+        : ActionEndTransactionRequest_EndTransaction.END_TRANSACTION_ROLLBACK
+
+    const request: ActionEndTransactionRequest = {
+      transactionId,
+      action: endAction
+    }
+
+    const encoded = ActionEndTransactionRequest.encode(request).finish()
+    const typeUrl = `${TYPE_URL_PREFIX}.ActionEndTransactionRequest`
+    const body = packAny(typeUrl, encoded)
+
+    const flightAction = {
+      type: ACTION_END_TRANSACTION,
+      body
+    }
+
+    // Execute the action - no result expected
+    for await (const _ of this.doAction(flightAction, options)) {
+      // Consume any results (usually none for end transaction)
+    }
+  }
+
+  /**
+   * Commits a transaction.
+   *
+   * All operations executed within the transaction are made permanent.
+   * The transaction ID becomes invalid after this call.
+   *
+   * @param transactionId - The transaction ID from beginTransaction
+   * @param options - Optional call options
+   * @throws {FlightError} If the commit fails
+   *
+   * @example
+   * ```ts
+   * const txn = await client.beginTransaction()
+   * await client.executeUpdate(
+   *   "INSERT INTO users (name) VALUES ('Alice')",
+   *   { transactionId: txn.transactionId }
+   * )
+   * await client.commit(txn.transactionId)
+   * ```
+   */
+  async commit(transactionId: Buffer, options?: CallOptions): Promise<void> {
+    return this.endTransaction(transactionId, "commit", options)
+  }
+
+  /**
+   * Rolls back a transaction.
+   *
+   * All operations executed within the transaction are undone.
+   * The transaction ID becomes invalid after this call.
+   *
+   * @param transactionId - The transaction ID from beginTransaction
+   * @param options - Optional call options
+   * @throws {FlightError} If the rollback fails
+   *
+   * @example
+   * ```ts
+   * const txn = await client.beginTransaction()
+   * try {
+   *   await client.executeUpdate(
+   *     "INSERT INTO users (name) VALUES ('Alice')",
+   *     { transactionId: txn.transactionId }
+   *   )
+   *   await client.commit(txn.transactionId)
+   * } catch (error) {
+   *   await client.rollback(txn.transactionId)
+   *   throw error
+   * }
+   * ```
+   */
+  async rollback(transactionId: Buffer, options?: CallOptions): Promise<void> {
+    return this.endTransaction(transactionId, "rollback", options)
   }
 }
 

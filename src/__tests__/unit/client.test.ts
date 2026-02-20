@@ -193,4 +193,42 @@ describe("FlightSqlClient", () => {
       expect(typeof client.getXdbcTypeInfo).toBe("function")
     })
   })
+
+  describe("transaction methods", () => {
+    test("has beginTransaction method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.beginTransaction).toBe("function")
+    })
+
+    test("has endTransaction method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.endTransaction).toBe("function")
+    })
+
+    test("has commit method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.commit).toBe("function")
+    })
+
+    test("has rollback method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.rollback).toBe("function")
+    })
+  })
 })

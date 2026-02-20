@@ -166,7 +166,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M5: Transactions & Polish
 
-- [ ] Implement `BeginTransaction` / `EndTransaction`
+- [x] Implement `BeginTransaction` / `EndTransaction`
 - [ ] Implement `CancelQuery`
 - [ ] Add comprehensive error handling
 - [ ] Documentation and examples
