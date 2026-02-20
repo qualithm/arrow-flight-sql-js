@@ -172,7 +172,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 ### M5: Transactions & Polish
 
 - [x] Implement `BeginTransaction` / `EndTransaction`
-- [ ] Implement `CancelFlightInfo` (requires arrow-flight-js to export encoder/decoder)
+- [x] Implement `CancelFlightInfo` (inherited from base FlightClient)
 - [ ] Add comprehensive error handling
 - [ ] Documentation and examples
 
@@ -192,5 +192,6 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 > Append-only. Never edit or delete existing entries.
 
-| Date | Learning |
-| ---- | -------- |
+| Date       | Learning                                                                                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-20 | `CancelFlightInfo` is a base Flight action implemented in `FlightClient`, not Flight SQL-specific. Since `FlightSqlClient` extends `FlightClient`, the method is inherited automatically - no additional implementation needed. |

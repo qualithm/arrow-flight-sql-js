@@ -28,6 +28,7 @@ export { flightInfoToTable, iterateResults, queryToTable, ticketToTable } from "
 // Re-export base Flight client types for convenience
 export {
   type CallOptions,
+  type CancelStatus,
   type FlightClientOptions,
   type FlightData,
   FlightError,

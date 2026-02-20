@@ -230,5 +230,14 @@ describe("FlightSqlClient", () => {
 
       expect(typeof client.rollback).toBe("function")
     })
+
+    test("has cancelFlightInfo method (inherited from FlightClient)", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.cancelFlightInfo).toBe("function")
+    })
   })
 })
