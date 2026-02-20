@@ -1,23 +1,26 @@
 {
-  "name": "@qualithm/npm-example",
+  "name": "@qualithm/arrow-flight-sql-js",
   "version": "0.1.0",
-  "description": "Production-ready template for NPM packages.",
+  "description": "Arrow Flight SQL client for JavaScript and TypeScript runtimes.",
   "private": false,
   "type": "module",
   "keywords": [
+    "arrow",
+    "flight",
+    "sql",
+    "grpc",
     "typescript",
-    "template",
-    "npm"
+    "apache-arrow"
   ],
   "license": "MIT",
   "author": "Qualithm",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/qualithm/npm-example.git"
+    "url": "git+https://github.com/qualithm/arrow-flight-sql-js.git"
   },
-  "homepage": "https://github.com/qualithm/npm-example#readme",
+  "homepage": "https://github.com/qualithm/arrow-flight-sql-js#readme",
   "bugs": {
-    "url": "https://github.com/qualithm/npm-example/issues"
+    "url": "https://github.com/qualithm/arrow-flight-sql-js/issues"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",

@@ -133,7 +133,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M1: Project Setup
 
-- [ ] Update package.json with correct name/description
+- [x] Update package.json with correct name/description
 - [ ] Add peer dependency on `@qualithm/arrow-flight-js`
 - [ ] Define proto file handling for Flight SQL messages
 - [ ] Set up proto compilation pipeline
