@@ -140,10 +140,10 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M2: Core SQL Execution
 
-- [ ] `FlightSqlClient` wrapping base `FlightClient`
-- [ ] Implement `CommandStatementQuery` (simple queries)
-- [ ] Implement `CommandStatementUpdate` (INSERT/UPDATE/DELETE)
-- [ ] Result set iteration with Arrow Tables
+- [x] `FlightSqlClient` wrapping base `FlightClient`
+- [x] Implement `CommandStatementQuery` (simple queries)
+- [x] Implement `CommandStatementUpdate` (INSERT/UPDATE/DELETE)
+- [x] Result set iteration with Arrow Tables
 
 ### M3: Prepared Statements
 
