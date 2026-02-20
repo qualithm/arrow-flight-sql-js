@@ -23,7 +23,8 @@ jobs:
     if:
       ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion ==
       'success' }}
-    environment: github-npm
+    environment:
+      name: github-npm
     permissions:
       contents: read
       id-token: write
