@@ -62,7 +62,7 @@ async function schemaInspection(
 
     console.log("  Schema:")
     for (const field of table.schema.fields) {
-      console.log(`    ${field.name}: ${field.type}`)
+      console.log(`    ${field.name}: ${JSON.stringify(field.type)}`)
     }
   } catch (error) {
     console.log("  Query failed (expected if table doesn't exist)")
