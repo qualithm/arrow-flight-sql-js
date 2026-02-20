@@ -173,7 +173,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M6: Testing Infrastructure
 
-- [ ] Add Docker Compose with Arrow Flight SQL test server
+- [ ] Add test connection configuration for Arrow Flight SQL server
 - [ ] Create integration test suite (query, update, prepared statements, metadata)
 - [ ] Run tests on Bun (unit + integration)
 - [ ] Run tests on Node.js (unit + integration)
