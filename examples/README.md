@@ -98,6 +98,7 @@ Creating and executing prepared statements with parameter binding. Demonstrates:
 - Building Arrow IPC parameter data
 - Binding parameters with `bindParameters()`
 - Re-executing with different parameter values
+- Creating prepared statements within transactions
 - Cleaning up with `closePreparedStatement()`
 
 ### [transactions.ts](transactions.ts)
@@ -105,7 +106,8 @@ Creating and executing prepared statements with parameter binding. Demonstrates:
 Atomic operations with transactions. Demonstrates:
 
 - Beginning transactions with `beginTransaction()`
-- Executing operations within a transaction
+- Executing updates within a transaction
+- Querying uncommitted changes with `query()` and `transactionId`
 - Committing with `commit()`
 - Rolling back with `rollback()` on error
 

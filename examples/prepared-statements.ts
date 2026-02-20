@@ -42,6 +42,10 @@ async function main(): Promise<void> {
     // Example 3: Prepared update with parameters
     console.log("\n--- Example 3: Prepared Update with Parameters ---")
     await preparedUpdateWithBinding(client, handles)
+
+    // Example 4: Prepared statement within a transaction
+    console.log("\n--- Example 4: Prepared Statement in Transaction ---")
+    await preparedStatementInTransaction(client, handles)
   } finally {
     // Always close prepared statements to release server resources
     console.log("\n--- Cleanup: Closing Prepared Statements ---")
@@ -152,6 +156,65 @@ async function preparedUpdateWithBinding(
   await client.bindParameters(prepared.handle, parameterData)
   const result = await client.executePreparedUpdate(prepared.handle)
   console.log("   Rows affected:", result.recordCount)
+}
+
+async function preparedStatementInTransaction(
+  client: Awaited<ReturnType<typeof createFlightSqlClient>>,
+  handles: Buffer[]
+): Promise<void> {
+  // Begin a transaction
+  console.log("1. Beginning transaction...")
+  const txn = await client.beginTransaction()
+
+  try {
+    // Create a prepared statement bound to the transaction
+    // The transactionId ensures all executions use this transaction
+    console.log("2. Creating prepared statement in transaction...")
+    const prepared = await client.createPreparedStatement(
+      "INSERT INTO audit_log (action, user_id) VALUES (?, ?)",
+      { transactionId: txn.transactionId }
+    )
+    handles.push(prepared.handle)
+
+    // Execute multiple times with different parameters
+    console.log("3. Executing prepared statement multiple times...")
+    const actions = [
+      { action: "login", userId: 1 },
+      { action: "view_page", userId: 1 },
+      { action: "logout", userId: 1 }
+    ]
+
+    for (const params of actions) {
+      const parameterData = await buildAuditParameterBatch(params)
+      await client.bindParameters(prepared.handle, parameterData)
+      const result = await client.executePreparedUpdate(prepared.handle)
+      console.log(`   ${params.action}: affected ${String(result.recordCount)} row(s)`)
+    }
+
+    // Commit all inserts atomically
+    console.log("4. Committing transaction...")
+    await client.commit(txn.transactionId)
+    console.log("   All audit entries committed")
+  } catch (error) {
+    console.log("   Error occurred, rolling back...")
+    await client.rollback(txn.transactionId)
+    throw error
+  }
+}
+
+/**
+ * Builds an Arrow IPC record batch for audit log parameters.
+ */
+async function buildAuditParameterBatch(params: { action: string; userId: number }): Promise<{
+  schema: Uint8Array
+  data: Uint8Array
+}> {
+  const table = tableFromArrays({
+    action: [params.action],
+    user_id: [params.userId]
+  })
+
+  return recordBatchToIPC(table.batches[0])
 }
 
 /**

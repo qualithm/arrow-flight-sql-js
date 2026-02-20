@@ -6,7 +6,7 @@
 import type { FlightData, FlightInfo, Ticket } from "@qualithm/arrow-flight-js"
 import { tableFromIPC } from "apache-arrow"
 
-import type { FlightSqlClient } from "./client.js"
+import type { FlightSqlClient, QueryOptions } from "./client.js"
 import { FlightSqlError } from "./errors.js"
 
 /**
@@ -55,6 +55,7 @@ async function collectFlightData(
  *
  * @param client - The FlightSqlClient to use
  * @param query - The SQL query to execute
+ * @param options - Optional query options including transactionId
  * @returns An Arrow Table containing all query results
  *
  * @example
@@ -69,13 +70,22 @@ async function collectFlightData(
  * for (const row of table) {
  *   console.log(row.toJSON())
  * }
+ *
+ * // Query within a transaction
+ * const txn = await client.beginTransaction()
+ * const uncommittedData = await queryToTable(
+ *   client,
+ *   "SELECT * FROM users WHERE id = 999",
+ *   { transactionId: txn.transactionId }
+ * )
  * ```
  */
 export async function queryToTable(
   client: FlightSqlClient,
-  query: string
+  query: string,
+  options?: QueryOptions
 ): Promise<ReturnType<typeof tableFromIPC>> {
-  const info = await client.query(query)
+  const info = await client.query(query, options)
   return flightInfoToTable(client, info)
 }
 
