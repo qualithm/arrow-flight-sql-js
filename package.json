@@ -68,8 +68,8 @@
     "apache-arrow": ">=17.0.0"
   },
   "devDependencies": {
-    "@qualithm/arrow-flight-js": "1.5.0",
-    "apache-arrow": "19.0.1",
+    "@qualithm/arrow-flight-js": "1.6.0",
+    "apache-arrow": "21.1.0",
     "@eslint/js": "10.0.1",
     "grpc-tools": "1.13.1",
     "ts-proto": "2.11.2",
