@@ -17,6 +17,9 @@ bun run examples/basic-query.ts
 # Authentication patterns
 bun run examples/authentication.ts
 
+# TLS/mTLS connections (production)
+bun run examples/tls-connection.ts
+
 # INSERT, UPDATE, DELETE operations
 bun run examples/updates.ts
 
@@ -58,6 +61,15 @@ Different authentication methods for connecting. Demonstrates:
 - Bearer token authentication (JWT/OAuth)
 - Two-step connection pattern
 
+### [tls-connection.ts](tls-connection.ts)
+
+TLS and mTLS connections for production environments. Demonstrates:
+
+- TLS with system CA certificates
+- Custom CA certificates for self-signed/private CAs
+- Mutual TLS (mTLS) with client certificates
+- Certificate verification options
+
 ### [updates.ts](updates.ts)
 
 Executing data modification statements. Demonstrates:
@@ -74,14 +86,18 @@ Processing large result sets without loading everything into memory. Demonstrate
 - Getting FlightInfo metadata before fetching data
 - Streaming results with `iterateResults()`
 - Processing batches incrementally
+- Fetching individual endpoints with `ticketToTable()`
+- Parallel endpoint fetching for distributed queries
 
 ### [prepared-statements.ts](prepared-statements.ts)
 
-Creating and executing prepared statements. Demonstrates:
+Creating and executing prepared statements with parameter binding. Demonstrates:
 
 - Creating prepared statements with `createPreparedStatement()`
-- Inspecting schema information
-- Executing prepared queries and updates
+- Inspecting parameter and dataset schemas
+- Building Arrow IPC parameter data
+- Binding parameters with `bindParameters()`
+- Re-executing with different parameter values
 - Cleaning up with `closePreparedStatement()`
 
 ### [transactions.ts](transactions.ts)
