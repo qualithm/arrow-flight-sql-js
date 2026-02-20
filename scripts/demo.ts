@@ -1,51 +1,32 @@
 #!/usr/bin/env bun
 /**
- * Demo script showcasing the Arrow Flight SQL client.
+ * Demo script to test Arrow Flight SQL server connectivity.
  *
- * Run with: bun run demo
+ * Usage:
+ *   bun run demo
  *
- * This demo requires a running Flight SQL server. You can start one with:
- * - DuckDB: duckdb -cmd "INSTALL arrow; LOAD arrow;" :memory:
- * - Apache Arrow Flight SQL Example Server
+ * Environment variables:
+ *   FLIGHT_HOST - Server hostname (default: localhost)
+ *   FLIGHT_PORT - Server port (default: 8815)
+ *   FLIGHT_TLS  - Enable TLS (default: false)
  */
 
-import { createFlightSqlClient, queryToTable } from "../src/index.js"
-
-console.log("Arrow Flight SQL Client Demo")
-console.log("============================\n")
+import { createFlightSqlClient } from "../src/index.js"
 
 const host = process.env.FLIGHT_HOST ?? "localhost"
 const port = Number(process.env.FLIGHT_PORT ?? 8815)
+const tls = process.env.FLIGHT_TLS === "true"
 
-console.log(`Connecting to ${host}:${String(port)}...`)
+console.log("Arrow Flight SQL Connection Test")
+console.log("=================================")
+console.log(`Host: ${host}:${String(port)}`)
+console.log(`TLS:  ${String(tls)}\n`)
 
 try {
-  const client = await createFlightSqlClient({
-    host,
-    port,
-    tls: false
-  })
-
-  console.log("Connected!\n")
-
-  // Execute a simple query
-  console.log("Executing query: SELECT 1 as value")
-  const info = await client.query("SELECT 1 as value")
-  console.log("FlightInfo received:")
-  console.log("  - Endpoints:", info.endpoint.length)
-
-  // If we can retrieve the table
-  if (info.endpoint.length > 0) {
-    const table = await queryToTable(client, "SELECT 1 as value, 'hello' as message")
-    console.log("\nQuery result:")
-    console.log("  - Rows:", table.numRows)
-    console.log("  - Schema:", table.schema.fields.map((f) => f.name).join(", "))
-  }
-
+  const client = await createFlightSqlClient({ host, port, tls })
+  console.log("Connected successfully!")
   client.close()
-  console.log("\nDemo completed successfully!")
 } catch (error) {
-  console.error("Demo failed:", error instanceof Error ? error.message : String(error))
-  console.log("\nNote: This demo requires a running Flight SQL server.")
+  console.error("Connection failed:", error instanceof Error ? error.message : String(error))
   process.exit(1)
 }
