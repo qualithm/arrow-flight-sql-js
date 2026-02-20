@@ -7,6 +7,7 @@ import type { FlightData, FlightInfo, Ticket } from "@qualithm/arrow-flight-js"
 import { tableFromIPC } from "apache-arrow"
 
 import type { FlightSqlClient } from "./client.js"
+import { FlightSqlError } from "./errors.js"
 
 /**
  * Options for iterating over query results.
@@ -108,7 +109,9 @@ export async function flightInfoToTable(
   }
 
   if (allChunks.length === 0) {
-    throw new Error("no data returned from query")
+    throw new FlightSqlError("no data returned from query", "RESULT_ERROR", {
+      flightCode: "NOT_FOUND"
+    })
   }
 
   // Combine all chunks and parse as IPC
@@ -170,7 +173,9 @@ export async function ticketToTable(
   const chunks = await collectFlightData(dataStream)
 
   if (chunks.length === 0) {
-    throw new Error("no data returned from ticket")
+    throw new FlightSqlError("no data returned from ticket", "RESULT_ERROR", {
+      flightCode: "NOT_FOUND"
+    })
   }
 
   const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)

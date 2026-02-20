@@ -21,6 +21,16 @@ export type {
 } from "./client.js"
 export { createFlightSqlClient, FlightSqlClient } from "./client.js"
 
+// Errors
+export type { FlightSqlErrorCode, FlightSqlErrorOptions } from "./errors.js"
+export {
+  FlightSqlError,
+  validateHandle,
+  validateParameterData,
+  validateQuery,
+  validateTransactionId
+} from "./errors.js"
+
 // Result set utilities
 export type { ResultIteratorOptions } from "./results.js"
 export { flightInfoToTable, iterateResults, queryToTable, ticketToTable } from "./results.js"

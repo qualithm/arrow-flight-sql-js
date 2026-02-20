@@ -31,9 +31,12 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### Modules
 
-| Module     | Purpose          |
-| ---------- | ---------------- |
-| `index.ts` | Main entry point |
+| Module       | Purpose                              |
+| ------------ | ------------------------------------ |
+| `index.ts`   | Main entry point                     |
+| `client.ts`  | FlightSqlClient implementation       |
+| `results.ts` | Result set iteration utilities       |
+| `errors.ts`  | Error types and validation functions |
 
 ### Flight SQL Commands (via DoGet/DoPut/DoAction)
 
@@ -173,7 +176,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 - [x] Implement `BeginTransaction` / `EndTransaction`
 - [x] Implement `CancelFlightInfo` (inherited from base FlightClient)
-- [ ] Add comprehensive error handling
+- [x] Add comprehensive error handling
 - [ ] Documentation and examples
 
 ### M6: Testing Infrastructure

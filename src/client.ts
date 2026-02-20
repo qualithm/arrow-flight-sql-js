@@ -9,10 +9,16 @@ import {
   cmdDescriptor,
   FlightClient,
   type FlightClientOptions,
-  FlightError,
   type FlightInfo
 } from "@qualithm/arrow-flight-js"
 
+import {
+  FlightSqlError,
+  validateHandle,
+  validateParameterData,
+  validateQuery,
+  validateTransactionId
+} from "./errors.js"
 import {
   ActionBeginTransactionRequest,
   ActionBeginTransactionResult,
@@ -351,6 +357,8 @@ export class FlightSqlClient extends FlightClient {
    * ```
    */
   async query(query: string, options?: QueryOptions): Promise<FlightInfo> {
+    validateQuery(query)
+
     const command: CommandStatementQuery = {
       query,
       transactionId: options?.transactionId
@@ -393,6 +401,8 @@ export class FlightSqlClient extends FlightClient {
    * ```
    */
   async executePreparedQuery(handle: Buffer, options?: CallOptions): Promise<FlightInfo> {
+    validateHandle(handle, "prepared statement handle")
+
     const command: CommandPreparedStatementQuery = {
       preparedStatementHandle: handle
     }
@@ -426,6 +436,8 @@ export class FlightSqlClient extends FlightClient {
    * ```
    */
   async executePreparedUpdate(handle: Buffer, options?: CallOptions): Promise<UpdateResult> {
+    validateHandle(handle, "prepared statement handle")
+
     const command: CommandPreparedStatementUpdate = {
       preparedStatementHandle: handle
     }
@@ -454,13 +466,17 @@ export class FlightSqlClient extends FlightClient {
     const firstResult = results.at(0)
 
     if (!firstResult) {
-      throw new FlightError("no result returned from prepared update", "INTERNAL")
+      throw new FlightSqlError("no result returned from prepared update", "RESULT_ERROR", {
+        flightCode: "INTERNAL"
+      })
     }
 
     // Decode the DoPutUpdateResult from appMetadata
     const { appMetadata } = firstResult
     if (appMetadata.length === 0) {
-      throw new FlightError("prepared update result missing app metadata", "INTERNAL")
+      throw new FlightSqlError("prepared update result missing app metadata", "RESULT_ERROR", {
+        flightCode: "INTERNAL"
+      })
     }
 
     const updateResult = DoPutUpdateResult.decode(appMetadata)
@@ -487,6 +503,8 @@ export class FlightSqlClient extends FlightClient {
    * ```
    */
   async executeUpdate(query: string, options?: QueryOptions): Promise<UpdateResult> {
+    validateQuery(query)
+
     const command: CommandStatementUpdate = {
       query,
       transactionId: options?.transactionId
@@ -516,13 +534,17 @@ export class FlightSqlClient extends FlightClient {
     const firstResult = results.at(0)
 
     if (!firstResult) {
-      throw new FlightError("no result returned from update", "INTERNAL")
+      throw new FlightSqlError("no result returned from update", "RESULT_ERROR", {
+        flightCode: "INTERNAL"
+      })
     }
 
     // Decode the DoPutUpdateResult from appMetadata
     const { appMetadata } = firstResult
     if (appMetadata.length === 0) {
-      throw new FlightError("update result missing app metadata", "INTERNAL")
+      throw new FlightSqlError("update result missing app metadata", "RESULT_ERROR", {
+        flightCode: "INTERNAL"
+      })
     }
 
     const updateResult = DoPutUpdateResult.decode(appMetadata)
@@ -561,6 +583,8 @@ export class FlightSqlClient extends FlightClient {
     query: string,
     options?: PreparedStatementOptions
   ): Promise<PreparedStatementResult> {
+    validateQuery(query)
+
     const request: ActionCreatePreparedStatementRequest = {
       query,
       transactionId: options?.transactionId
@@ -584,7 +608,13 @@ export class FlightSqlClient extends FlightClient {
     }
 
     if (!resultBody || resultBody.length === 0) {
-      throw new FlightError("no result returned from create prepared statement", "INTERNAL")
+      throw new FlightSqlError(
+        "no result returned from create prepared statement",
+        "RESULT_ERROR",
+        {
+          flightCode: "INTERNAL"
+        }
+      )
     }
 
     // Unpack the Any message and decode the result
@@ -613,6 +643,8 @@ export class FlightSqlClient extends FlightClient {
    * ```
    */
   async closePreparedStatement(handle: Buffer, options?: CallOptions): Promise<void> {
+    validateHandle(handle, "prepared statement handle")
+
     const request: ActionClosePreparedStatementRequest = {
       preparedStatementHandle: handle
     }
@@ -675,6 +707,9 @@ export class FlightSqlClient extends FlightClient {
     parameters: ParameterData,
     options?: CallOptions
   ): Promise<BindParametersResult> {
+    validateHandle(handle, "prepared statement handle")
+    validateParameterData(parameters)
+
     const command: CommandPreparedStatementQuery = {
       preparedStatementHandle: handle
     }
@@ -1062,7 +1097,9 @@ export class FlightSqlClient extends FlightClient {
     }
 
     if (!resultBody || resultBody.length === 0) {
-      throw new FlightError("no result returned from begin transaction", "INTERNAL")
+      throw new FlightSqlError("no result returned from begin transaction", "TRANSACTION_ERROR", {
+        flightCode: "INTERNAL"
+      })
     }
 
     // Unpack the Any message and decode the result
@@ -1090,6 +1127,8 @@ export class FlightSqlClient extends FlightClient {
     action: TransactionAction,
     options?: CallOptions
   ): Promise<void> {
+    validateTransactionId(transactionId)
+
     const endAction =
       action === "commit"
         ? ActionEndTransactionRequest_EndTransaction.END_TRANSACTION_COMMIT
