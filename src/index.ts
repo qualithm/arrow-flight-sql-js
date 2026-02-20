@@ -8,7 +8,13 @@
  */
 
 // Client
-export type { FlightSqlClientOptions, QueryOptions, UpdateResult } from "./client.js"
+export type {
+  FlightSqlClientOptions,
+  PreparedStatementOptions,
+  PreparedStatementResult,
+  QueryOptions,
+  UpdateResult
+} from "./client.js"
 export { createFlightSqlClient, FlightSqlClient } from "./client.js"
 
 // Result set utilities

@@ -14,6 +14,11 @@ import {
 } from "@qualithm/arrow-flight-js"
 
 import {
+  ActionClosePreparedStatementRequest,
+  ActionCreatePreparedStatementRequest,
+  ActionCreatePreparedStatementResult,
+  CommandPreparedStatementQuery,
+  CommandPreparedStatementUpdate,
   CommandStatementQuery,
   CommandStatementUpdate,
   DoPutUpdateResult
@@ -23,6 +28,12 @@ import {
  * Flight SQL type URL prefix for encoding commands in Any messages.
  */
 const TYPE_URL_PREFIX = "type.googleapis.com/arrow.flight.protocol.sql"
+
+/**
+ * Flight SQL action types.
+ */
+const ACTION_CREATE_PREPARED_STATEMENT = "CreatePreparedStatement"
+const ACTION_CLOSE_PREPARED_STATEMENT = "ClosePreparedStatement"
 
 /**
  * Options for creating a FlightSqlClient.
@@ -49,6 +60,42 @@ export type UpdateResult = {
    * A value of -1 indicates an unknown count.
    */
   recordCount: number
+}
+
+/**
+ * Options for creating a prepared statement.
+ */
+export type PreparedStatementOptions = CallOptions & {
+  /**
+   * Transaction ID for creating the prepared statement as part of a transaction.
+   * If not provided, executions of the prepared statement will be auto-committed.
+   */
+  transactionId?: Buffer
+}
+
+/**
+ * Result of creating a prepared statement.
+ */
+export type PreparedStatementResult = {
+  /**
+   * Opaque handle for the prepared statement on the server.
+   * Use this handle with executePreparedQuery or executePreparedUpdate.
+   */
+  handle: Buffer
+
+  /**
+   * The schema of the result set, if the query returns results.
+   * This is an IPC-encapsulated Schema as described in Schema.fbs.
+   * May be empty if the query does not return results.
+   */
+  datasetSchema: Buffer
+
+  /**
+   * The schema of the expected parameters, if the query has parameters.
+   * This is an IPC-encapsulated Schema as described in Schema.fbs.
+   * May be empty if the query has no parameters.
+   */
+  parameterSchema: Buffer
 }
 
 /**
@@ -115,6 +162,65 @@ function writeVarInt(buffer: Buffer, offset: number, value: number): number {
   }
   buffer[offset++] = value
   return offset
+}
+
+/**
+ * Reads a varint from a buffer.
+ */
+function readVarInt(buffer: Buffer, offset: number): { value: number; bytesRead: number } {
+  let value = 0
+  let shift = 0
+  let bytesRead = 0
+
+  while (offset < buffer.length) {
+    const byte = buffer[offset++]
+    bytesRead++
+    value |= (byte & 0x7f) << shift
+
+    if ((byte & 0x80) === 0) {
+      break
+    }
+    shift += 7
+  }
+
+  return { value, bytesRead }
+}
+
+/**
+ * Unpacks a protobuf Any message and returns the contained value bytes.
+ *
+ * @param buffer - The encoded Any message
+ * @returns The value bytes from the Any message
+ */
+function unpackAny(buffer: Buffer): Buffer {
+  // Any message format:
+  // field 1 (type_url): string - wire type 2 (length-delimited)
+  // field 2 (value): bytes - wire type 2 (length-delimited)
+  let offset = 0
+  let valueBytes: Buffer = Buffer.alloc(0)
+
+  while (offset < buffer.length) {
+    const tag = buffer[offset++]
+    const fieldNumber = tag >> 3
+    const wireType = tag & 0x07
+
+    if (wireType !== 2) {
+      // Skip non-length-delimited fields (not expected in Any)
+      continue
+    }
+
+    const { value: length, bytesRead } = readVarInt(buffer, offset)
+    offset += bytesRead
+
+    if (fieldNumber === 2) {
+      // This is the value field
+      valueBytes = buffer.subarray(offset, offset + length)
+    }
+
+    offset += length
+  }
+
+  return valueBytes
 }
 
 /**
@@ -194,6 +300,114 @@ export class FlightSqlClient extends FlightClient {
   }
 
   /**
+   * Executes a prepared statement query and returns flight information for retrieving results.
+   *
+   * This method sends a CommandPreparedStatementQuery to the server and returns
+   * FlightInfo containing endpoints for data retrieval. Use the returned
+   * FlightInfo with `doGet()` to retrieve the actual data.
+   *
+   * @param handle - The prepared statement handle from createPreparedStatement
+   * @param options - Optional call options
+   * @returns Flight information for retrieving query results
+   * @throws {FlightError} If the query fails
+   *
+   * @example
+   * ```ts
+   * const prepared = await client.createPreparedStatement("SELECT * FROM users WHERE id = ?")
+   *
+   * // Execute the prepared statement
+   * const info = await client.executePreparedQuery(prepared.handle)
+   *
+   * // Retrieve data from each endpoint
+   * for (const endpoint of info.endpoint) {
+   *   for await (const data of client.doGet(endpoint.ticket!)) {
+   *     // Process data
+   *   }
+   * }
+   *
+   * // Clean up
+   * await client.closePreparedStatement(prepared.handle)
+   * ```
+   */
+  async executePreparedQuery(handle: Buffer, options?: CallOptions): Promise<FlightInfo> {
+    const command: CommandPreparedStatementQuery = {
+      preparedStatementHandle: handle
+    }
+
+    const encoded = CommandPreparedStatementQuery.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandPreparedStatementQuery", encoded)
+
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Executes a prepared statement update (INSERT, UPDATE, DELETE).
+   *
+   * @param handle - The prepared statement handle from createPreparedStatement
+   * @param options - Optional call options
+   * @returns The update result containing the number of affected records
+   * @throws {FlightError} If the update fails
+   *
+   * @example
+   * ```ts
+   * const prepared = await client.createPreparedStatement(
+   *   "UPDATE users SET active = false WHERE id = ?"
+   * )
+   *
+   * // Execute the prepared statement
+   * const result = await client.executePreparedUpdate(prepared.handle)
+   * console.log("Rows updated:", result.recordCount)
+   *
+   * // Clean up
+   * await client.closePreparedStatement(prepared.handle)
+   * ```
+   */
+  async executePreparedUpdate(handle: Buffer, options?: CallOptions): Promise<UpdateResult> {
+    const command: CommandPreparedStatementUpdate = {
+      preparedStatementHandle: handle
+    }
+
+    const encoded = CommandPreparedStatementUpdate.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandPreparedStatementUpdate", encoded)
+
+    const stream = this.doPut(options)
+
+    // Send the command as the first message with descriptor
+    stream.write({
+      flightDescriptor: {
+        type: 2, // CMD
+        path: [],
+        cmd: descriptor.cmd
+      },
+      dataHeader: Buffer.alloc(0),
+      appMetadata: Buffer.alloc(0),
+      dataBody: Buffer.alloc(0)
+    })
+
+    stream.end()
+
+    // Collect results
+    const results = await stream.collectResults()
+    const firstResult = results.at(0)
+
+    if (!firstResult) {
+      throw new FlightError("no result returned from prepared update", "INTERNAL")
+    }
+
+    // Decode the DoPutUpdateResult from appMetadata
+    const { appMetadata } = firstResult
+    if (appMetadata.length === 0) {
+      throw new FlightError("prepared update result missing app metadata", "INTERNAL")
+    }
+
+    const updateResult = DoPutUpdateResult.decode(appMetadata)
+
+    return {
+      recordCount: updateResult.recordCount
+    }
+  }
+
+  /**
    * Executes a SQL update statement (INSERT, UPDATE, DELETE).
    *
    * @param query - The SQL update statement to execute
@@ -252,6 +466,106 @@ export class FlightSqlClient extends FlightClient {
 
     return {
       recordCount: updateResult.recordCount
+    }
+  }
+
+  /**
+   * Creates a prepared statement for the given SQL query.
+   *
+   * The returned handle can be used to execute the query multiple times
+   * with different parameters. The prepared statement should be closed
+   * when no longer needed using `closePreparedStatement()`.
+   *
+   * @param query - The SQL query to prepare
+   * @param options - Optional options including transaction ID
+   * @returns The prepared statement result containing the handle and schemas
+   * @throws {FlightError} If the preparation fails
+   *
+   * @example
+   * ```ts
+   * const prepared = await client.createPreparedStatement(
+   *   "SELECT * FROM users WHERE id = ?"
+   * )
+   *
+   * // Use prepared.handle with executePreparedQuery
+   * // ...
+   *
+   * // Clean up when done
+   * await client.closePreparedStatement(prepared.handle)
+   * ```
+   */
+  async createPreparedStatement(
+    query: string,
+    options?: PreparedStatementOptions
+  ): Promise<PreparedStatementResult> {
+    const request: ActionCreatePreparedStatementRequest = {
+      query,
+      transactionId: options?.transactionId
+    }
+
+    const encoded = ActionCreatePreparedStatementRequest.encode(request).finish()
+    const typeUrl = `${TYPE_URL_PREFIX}.ActionCreatePreparedStatementRequest`
+    const body = packAny(typeUrl, encoded)
+
+    const action = {
+      type: ACTION_CREATE_PREPARED_STATEMENT,
+      body
+    }
+
+    // Execute the action and collect the first result
+    let resultBody: Buffer | undefined
+
+    for await (const result of this.doAction(action, options)) {
+      resultBody = result.body
+      break
+    }
+
+    if (!resultBody || resultBody.length === 0) {
+      throw new FlightError("no result returned from create prepared statement", "INTERNAL")
+    }
+
+    // Unpack the Any message and decode the result
+    const valueBytes = unpackAny(resultBody)
+    const preparedResult = ActionCreatePreparedStatementResult.decode(valueBytes)
+
+    return {
+      handle: Buffer.from(preparedResult.preparedStatementHandle),
+      datasetSchema: Buffer.from(preparedResult.datasetSchema),
+      parameterSchema: Buffer.from(preparedResult.parameterSchema)
+    }
+  }
+
+  /**
+   * Closes a prepared statement and releases server resources.
+   *
+   * @param handle - The prepared statement handle to close
+   * @param options - Optional call options
+   * @throws {FlightError} If closing fails
+   *
+   * @example
+   * ```ts
+   * const prepared = await client.createPreparedStatement("SELECT * FROM users")
+   * // ... use the prepared statement ...
+   * await client.closePreparedStatement(prepared.handle)
+   * ```
+   */
+  async closePreparedStatement(handle: Buffer, options?: CallOptions): Promise<void> {
+    const request: ActionClosePreparedStatementRequest = {
+      preparedStatementHandle: handle
+    }
+
+    const encoded = ActionClosePreparedStatementRequest.encode(request).finish()
+    const typeUrl = `${TYPE_URL_PREFIX}.ActionClosePreparedStatementRequest`
+    const body = packAny(typeUrl, encoded)
+
+    const action = {
+      type: ACTION_CLOSE_PREPARED_STATEMENT,
+      body
+    }
+
+    // Execute the action - no result expected
+    for await (const _ of this.doAction(action, options)) {
+      // Consume any results (usually none for close)
     }
   }
 }

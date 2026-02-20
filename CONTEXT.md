@@ -147,10 +147,10 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M3: Prepared Statements
 
-- [ ] Implement `CreatePreparedStatement` action
-- [ ] Implement `ClosePreparedStatement` action
-- [ ] Implement `CommandPreparedStatementQuery`
-- [ ] Implement `CommandPreparedStatementUpdate`
+- [x] Implement `CreatePreparedStatement` action
+- [x] Implement `ClosePreparedStatement` action
+- [x] Implement `CommandPreparedStatementQuery`
+- [x] Implement `CommandPreparedStatementUpdate`
 - [ ] Parameter binding API
 
 ### M4: Metadata Queries

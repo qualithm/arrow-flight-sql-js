@@ -64,5 +64,41 @@ describe("FlightSqlClient", () => {
 
       expect(typeof client.executeUpdate).toBe("function")
     })
+
+    test("has createPreparedStatement method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.createPreparedStatement).toBe("function")
+    })
+
+    test("has closePreparedStatement method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.closePreparedStatement).toBe("function")
+    })
+
+    test("has executePreparedQuery method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.executePreparedQuery).toBe("function")
+    })
+
+    test("has executePreparedUpdate method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.executePreparedUpdate).toBe("function")
+    })
   })
 })
