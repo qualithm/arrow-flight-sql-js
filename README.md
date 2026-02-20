@@ -1,13 +1,126 @@
-# NPM Example
+# Arrow Flight SQL JS
 
-Production-ready template for NPM packages.
+Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
-## Usage
+SQL-specific functionality on top of Arrow Flight for database interactions. Built on
+[`@qualithm/arrow-flight-js`](https://github.com/qualithm/arrow-flight-js) as a peer dependency.
 
-1. Use this template to create a new repository
-2. Update `name` in `package.json` to your package name
-3. Update `CONTEXT.md` with your project's intent
-4. Start building in `src/`
+## Features
+
+- Full Arrow Flight SQL protocol support
+- Query execution with Apache Arrow result sets
+- Prepared statements with parameter binding
+- Transaction support (begin, commit, rollback)
+- Database metadata queries (catalogs, schemas, tables, keys)
+- Query cancellation
+- TypeScript-first with comprehensive type definitions
+- Streaming results with async iterables
+- Comprehensive error handling with typed error codes
+- ESM-only, tree-shakeable
+
+## Installation
+
+```bash
+npm install @qualithm/arrow-flight-sql-js @qualithm/arrow-flight-js apache-arrow
+# or
+bun add @qualithm/arrow-flight-sql-js @qualithm/arrow-flight-js apache-arrow
+```
+
+> **Note:** `@qualithm/arrow-flight-js` is a peer dependency and must be installed separately.
+
+## Quick Start
+
+```typescript
+import { createFlightSqlClient, queryToTable } from "@qualithm/arrow-flight-sql-js"
+
+const client = await createFlightSqlClient({
+  host: "localhost",
+  port: 8815,
+  tls: false
+})
+
+const table = await queryToTable(client, "SELECT * FROM users WHERE active = true")
+console.log("Rows:", table.numRows)
+
+for (const row of table) {
+  console.log(JSON.stringify(row))
+}
+
+client.close()
+```
+
+See the [examples](./examples) directory for complete, runnable demonstrations.
+
+## Examples
+
+| Example                                                     | Description                                    |
+| ----------------------------------------------------------- | ---------------------------------------------- |
+| [basic-query.ts](./examples/basic-query.ts)                 | Simple query execution with `queryToTable()`   |
+| [authentication.ts](./examples/authentication.ts)           | Basic auth, bearer tokens, connection patterns |
+| [updates.ts](./examples/updates.ts)                         | INSERT, UPDATE, DELETE operations              |
+| [streaming-results.ts](./examples/streaming-results.ts)     | Process large datasets with `iterateResults()` |
+| [prepared-statements.ts](./examples/prepared-statements.ts) | Parameterised queries and updates              |
+| [transactions.ts](./examples/transactions.ts)               | Atomic operations with commit/rollback         |
+| [metadata-queries.ts](./examples/metadata-queries.ts)       | Catalogs, schemas, tables, keys, SQL info      |
+| [cancellation.ts](./examples/cancellation.ts)               | Cancel long-running queries                    |
+| [error-handling.ts](./examples/error-handling.ts)           | `FlightSqlError` and `FlightError` handling    |
+
+## API Reference
+
+### Query Execution
+
+| Method                    | Description                         |
+| ------------------------- | ----------------------------------- |
+| `query()`                 | Execute a SQL query, get FlightInfo |
+| `executeUpdate()`         | Execute INSERT/UPDATE/DELETE        |
+| `executePreparedQuery()`  | Execute a prepared statement query  |
+| `executePreparedUpdate()` | Execute a prepared statement update |
+
+### Prepared Statements
+
+| Method                      | Description                            |
+| --------------------------- | -------------------------------------- |
+| `createPreparedStatement()` | Create a new prepared statement        |
+| `closePreparedStatement()`  | Close and release a prepared statement |
+| `bindParameters()`          | Bind parameter values                  |
+
+### Transactions
+
+| Method               | Description                 |
+| -------------------- | --------------------------- |
+| `beginTransaction()` | Start a new transaction     |
+| `commit()`           | Commit a transaction        |
+| `rollback()`         | Roll back a transaction     |
+| `endTransaction()`   | End transaction (low-level) |
+
+### Metadata
+
+| Method              | Description                          |
+| ------------------- | ------------------------------------ |
+| `getCatalogs()`     | List available catalogs              |
+| `getDbSchemas()`    | List database schemas                |
+| `getTables()`       | List tables with optional filtering  |
+| `getTableTypes()`   | List supported table types           |
+| `getPrimaryKeys()`  | Get primary key info for a table     |
+| `getExportedKeys()` | Get foreign keys referencing a table |
+| `getImportedKeys()` | Get foreign keys from a table        |
+| `getSqlInfo()`      | Get SQL dialect/server capabilities  |
+| `getXdbcTypeInfo()` | Get supported data types             |
+
+### Result Utilities
+
+| Function              | Description                           |
+| --------------------- | ------------------------------------- |
+| `queryToTable()`      | Execute query, return Arrow Table     |
+| `flightInfoToTable()` | Convert FlightInfo to Arrow Table     |
+| `ticketToTable()`     | Get single ticket data as Arrow Table |
+| `iterateResults()`    | Stream results as async iterable      |
+
+### Cancellation
+
+| Method               | Description            |
+| -------------------- | ---------------------- |
+| `cancelFlightInfo()` | Cancel a running query |
 
 ## Development
 
@@ -27,12 +140,6 @@ bun install
 bun run build
 ```
 
-### Running
-
-```bash
-bun run start
-```
-
 ### Testing
 
 ```bash
@@ -47,13 +154,6 @@ bun run format
 bun run typecheck
 ```
 
-### Benchmarks
+## License
 
-```bash
-bun run bench
-```
-
-## Publishing
-
-The package is automatically published to NPM when CI passes on main. Update the version in
-`package.json` before merging to trigger a new release.
+Apache-2.0

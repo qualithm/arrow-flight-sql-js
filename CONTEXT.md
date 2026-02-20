@@ -177,7 +177,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 - [x] Implement `BeginTransaction` / `EndTransaction`
 - [x] Implement `CancelFlightInfo` (inherited from base FlightClient)
 - [x] Add comprehensive error handling
-- [ ] Documentation and examples
+- [x] Documentation and examples
 
 ### M6: Testing Infrastructure
 
