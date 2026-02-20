@@ -89,7 +89,7 @@
 
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.0", "", {}, "sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw=="],
 
-    "@qualithm/arrow-flight-js": ["@qualithm/arrow-flight-js@1.6.0", "", { "dependencies": { "@grpc/grpc-js": "1.14.3", "apache-arrow": "21.1.0" } }, "sha512-ndBBt++ZPwYHxPVs0Lui56FRE5g9GkKOv5CkE7othazM7PwbKGWHPRpg6SvojuHHn9v8gCNuoeNYXY2ETwO2ag=="],
+    "@qualithm/arrow-flight-js": ["@qualithm/arrow-flight-js@1.6.2", "", { "dependencies": { "@grpc/grpc-js": "1.14.3", "apache-arrow": "21.1.0" } }, "sha512-z46bAX3bOxEb3miSm+SR/w4s9Dyu1E3XCHXP+I5Z01kOv6ix6htR88BK0TedZr6/Mpdv28MkZog+zqhdQYEAwA=="],
 
     "@shikijs/engine-oniguruma": ["@shikijs/engine-oniguruma@3.22.0", "", { "dependencies": { "@shikijs/types": "3.22.0", "@shikijs/vscode-textmate": "^10.0.2" } }, "sha512-DyXsOG0vGtNtl7ygvabHd7Mt5EY8gCNqR9Y7Lpbbd/PbJvgWrqaKzH1JW6H6qFkuUa8aCxoiYVv8/YfFljiQxA=="],
 
