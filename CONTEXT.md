@@ -62,7 +62,12 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 | `ClosePreparedStatement`  | Close a prepared statement       |
 | `BeginTransaction`        | Start a transaction              |
 | `EndTransaction`          | Commit or rollback a transaction |
-| `CancelQuery`             | Cancel a running query           |
+
+### Base Flight Actions
+
+| Action             | Purpose                                              |
+| ------------------ | ---------------------------------------------------- |
+| `CancelFlightInfo` | Cancel a running query (replaces deprecated actions) |
 
 ---
 
@@ -167,7 +172,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 ### M5: Transactions & Polish
 
 - [x] Implement `BeginTransaction` / `EndTransaction`
-- [ ] Implement `CancelQuery`
+- [ ] Implement `CancelFlightInfo` (requires arrow-flight-js to export encoder/decoder)
 - [ ] Add comprehensive error handling
 - [ ] Documentation and examples
 
