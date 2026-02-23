@@ -32,7 +32,7 @@ describe("Update Integration", () => {
   describe("executeUpdate", () => {
     it("executes INSERT statement", async () => {
       const result = await client.executeUpdate(
-        "INSERT INTO test_updates (id, value) VALUES (1, 'test')"
+        "INSERT INTO test.integers (id, value) VALUES (999, 1)"
       )
 
       // recordCount should be -1 (unknown) or >= 0
@@ -40,13 +40,13 @@ describe("Update Integration", () => {
     })
 
     it("executes UPDATE statement", async () => {
-      const result = await client.executeUpdate("UPDATE test_updates SET value = 'updated'")
+      const result = await client.executeUpdate("UPDATE test.integers SET value = 42")
 
       expect(result.recordCount).toBeGreaterThanOrEqual(-1)
     })
 
     it("executes DELETE statement", async () => {
-      const result = await client.executeUpdate("DELETE FROM test_updates WHERE id = 1")
+      const result = await client.executeUpdate("DELETE FROM test.integers WHERE id = 999")
 
       expect(result.recordCount).toBeGreaterThanOrEqual(-1)
     })
@@ -84,9 +84,7 @@ describe("Update Integration", () => {
 
     it("rejects INSERT with PERMISSION_DENIED", async () => {
       try {
-        await readerClient.executeUpdate(
-          "INSERT INTO test_updates (id, value) VALUES (999, 'denied')"
-        )
+        await readerClient.executeUpdate("INSERT INTO test.integers (id, value) VALUES (999, 1)")
         expect.unreachable("Expected PERMISSION_DENIED error")
       } catch (error) {
         expect((error as { code: string }).code).toBe("PERMISSION_DENIED")

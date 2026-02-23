@@ -43,9 +43,7 @@ describe("Prepared Statements Integration", () => {
     })
 
     it("creates a prepared statement for UPDATE query", async () => {
-      const prepared = await client.createPreparedStatement(
-        "UPDATE test_updates SET value = 'prepared'"
-      )
+      const prepared = await client.createPreparedStatement("UPDATE test.integers SET value = 42")
 
       expect(prepared.handle).toBeDefined()
       expect(prepared.handle.length).toBeGreaterThan(0)
@@ -112,7 +110,7 @@ describe("Prepared Statements Integration", () => {
   describe("executePreparedUpdate", () => {
     it("executes a prepared update", async () => {
       const prepared = await client.createPreparedStatement(
-        "INSERT INTO test_prepared (id, value) VALUES (1, 'test')"
+        "INSERT INTO test.integers (id, value) VALUES (998, 1)"
       )
 
       const result = await client.executePreparedUpdate(prepared.handle)

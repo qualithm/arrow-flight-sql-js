@@ -71,20 +71,46 @@ describe("Transactions Integration", () => {
     it("commits a transaction", async () => {
       const { transactionId } = await client.beginTransaction()
 
-      // Execute something in the transaction
-      await client.executeUpdate("INSERT INTO test_txn (id) VALUES (1)", { transactionId })
-
-      // Commit should succeed
+      // Commit should succeed (even without executing anything)
       await client.endTransaction(transactionId, "commit")
     })
 
     it("rolls back a transaction", async () => {
       const { transactionId } = await client.beginTransaction()
 
-      // Execute something in the transaction
-      await client.executeUpdate("INSERT INTO test_txn (id) VALUES (2)", { transactionId })
+      // Rollback should succeed (even without executing anything)
+      await client.endTransaction(transactionId, "rollback")
+    })
 
-      // Rollback should succeed
+    it("commits a transaction with pending updates", async () => {
+      const { transactionId } = await client.beginTransaction()
+
+      // Execute updates within the transaction
+      const result1 = await client.executeUpdate(
+        "INSERT INTO test.integers (id, value) VALUES (999, 1)",
+        { transactionId }
+      )
+      expect(result1.recordCount).toBeGreaterThanOrEqual(0)
+
+      const result2 = await client.executeUpdate("UPDATE test.integers SET value = 42", {
+        transactionId
+      })
+      expect(result2.recordCount).toBeGreaterThanOrEqual(0)
+
+      // Commit should succeed
+      await client.endTransaction(transactionId, "commit")
+    })
+
+    it("rolls back a transaction with pending updates", async () => {
+      const { transactionId } = await client.beginTransaction()
+
+      // Execute updates within the transaction
+      const result = await client.executeUpdate("DELETE FROM test.integers WHERE id = 1", {
+        transactionId
+      })
+      expect(result.recordCount).toBeGreaterThanOrEqual(0)
+
+      // Rollback should succeed and discard the pending delete
       await client.endTransaction(transactionId, "rollback")
     })
   })

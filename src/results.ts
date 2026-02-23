@@ -3,7 +3,12 @@
  *
  * @packageDocumentation
  */
-import type { FlightData, FlightInfo, Ticket } from "@qualithm/arrow-flight-js"
+import {
+  flightDataToIpc,
+  type FlightData,
+  type FlightInfo,
+  type Ticket
+} from "@qualithm/arrow-flight-js"
 import { tableFromIPC } from "apache-arrow"
 
 import type { FlightSqlClient, QueryOptions } from "./client.js"
@@ -23,26 +28,22 @@ export type ResultIteratorOptions = {
 /**
  * Collects all FlightData from a doGet stream into Arrow IPC bytes.
  *
+ * Uses flightDataToIpc to properly frame the data with continuation tokens
+ * and metadata length prefixes as required by the Arrow IPC format.
+ *
  * @param dataStream - The async iterable of FlightData messages
- * @returns Combined IPC bytes for all batches
+ * @returns Properly framed Arrow IPC bytes
  */
 async function collectFlightData(
   dataStream: AsyncGenerator<FlightData, void, undefined>
-): Promise<Uint8Array[]> {
-  const chunks: Uint8Array[] = []
+): Promise<Uint8Array> {
+  const messages: FlightData[] = []
 
   for await (const data of dataStream) {
-    // The first message contains the schema in dataHeader
-    if (data.dataHeader.length > 0) {
-      chunks.push(data.dataHeader)
-    }
-    // Data body contains the actual record batch
-    if (data.dataBody.length > 0) {
-      chunks.push(data.dataBody)
-    }
+    messages.push(data)
   }
 
-  return chunks
+  return flightDataToIpc(messages)
 }
 
 /**
@@ -114,8 +115,10 @@ export async function flightInfoToTable(
     }
 
     const dataStream = client.doGet(endpoint.ticket)
-    const chunks = await collectFlightData(dataStream)
-    allChunks.push(...chunks)
+    const ipcBytes = await collectFlightData(dataStream)
+    if (ipcBytes.length > 0) {
+      allChunks.push(ipcBytes)
+    }
   }
 
   if (allChunks.length === 0) {
@@ -124,7 +127,7 @@ export async function flightInfoToTable(
     })
   }
 
-  // Combine all chunks and parse as IPC
+  // Combine all endpoint data and parse as IPC
   const totalLength = allChunks.reduce((sum, chunk) => sum + chunk.length, 0)
   const combined = new Uint8Array(totalLength)
   let offset = 0
@@ -180,21 +183,13 @@ export async function ticketToTable(
   ticket: Ticket
 ): Promise<ReturnType<typeof tableFromIPC>> {
   const dataStream = client.doGet(ticket)
-  const chunks = await collectFlightData(dataStream)
+  const ipcBytes = await collectFlightData(dataStream)
 
-  if (chunks.length === 0) {
+  if (ipcBytes.length === 0) {
     throw new FlightSqlError("no data returned from ticket", "RESULT_ERROR", {
       flightCode: "NOT_FOUND"
     })
   }
 
-  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-  const combined = new Uint8Array(totalLength)
-  let offset = 0
-  for (const chunk of chunks) {
-    combined.set(chunk, offset)
-    offset += chunk.length
-  }
-
-  return tableFromIPC(combined)
+  return tableFromIPC(ipcBytes)
 }
