@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 import {
-  flightDataToIpc,
   type FlightData,
+  flightDataToIpc,
   type FlightInfo,
   type Ticket
 } from "@qualithm/arrow-flight-js"
