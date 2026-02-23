@@ -143,7 +143,11 @@ bun run build
 ### Testing
 
 ```bash
+# Unit tests
 bun test
+
+# Integration tests (requires running Arrow Flight SQL server)
+FLIGHT_HOST=localhost FLIGHT_PORT=50051 bun run test:integration
 ```
 
 ### Linting & Formatting

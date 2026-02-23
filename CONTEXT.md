@@ -181,13 +181,13 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### M6: Testing Infrastructure
 
-- [ ] Add test connection configuration for Arrow Flight SQL server
-- [ ] Create integration test suite (query, update, prepared statements, metadata)
+- [x] Add test connection configuration for Arrow Flight SQL server
+- [x] Create integration test suite (query, update, prepared statements, metadata)
 - [ ] Run tests on Bun (unit + integration)
 - [ ] Run tests on Node.js (unit + integration)
 - [ ] Run tests on Deno (unit + integration)
 - [ ] Enable coverage reporting with threshold enforcement
-- [ ] Add test fixtures for Arrow schemas/data
+- [x] Add test fixtures for Arrow schemas/data (uses test server fixtures)
 
 ---
 
@@ -198,3 +198,4 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 | Date       | Learning                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-02-20 | `CancelFlightInfo` is a base Flight action implemented in `FlightClient`, not Flight SQL-specific. Since `FlightSqlClient` extends `FlightClient`, the method is inherited automatically - no additional implementation needed. |
+| 2026-02-23 | Integration tests target Arrow Flight SQL server; config via env vars FLIGHT_HOST/FLIGHT_PORT; tests cover queries, updates, prepared statements, transactions, metadata                                                        |
