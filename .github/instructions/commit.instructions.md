@@ -11,8 +11,7 @@ description: "Guidelines for writing commit messages"
 type(scope)!: subject
 ```
 
-- **type**: one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`,
-  `chore`, `revert`
+- **type**: `feat` | `fix` | `docs` | `style` | `refactor` | `perf` | `test` | `build` | `ci` | `chore` | `revert`
 - **scope**: _(optional)_ area affected, e.g. `parser`, `ui`
 - **!**: _(optional)_ indicates a breaking change
 - **subject**: imperative, lowercase, no trailing period
@@ -50,26 +49,29 @@ Improves UX for returning users.
 **Example**
 
 ```
-refactor(auth)!: replace session tokens with JWTs
+fix(ui)!: prevent crash on null avatar
 
-BREAKING CHANGE: session cookies are no longer valid
+BREAKING CHANGE: Avatar component prop "img" renamed to "src".
 Closes #456
 ```
 
 ---
 
-## Type Reference
+## Reverts
 
-| Type       | Description                     |
-| ---------- | ------------------------------- |
-| `feat`     | New feature                     |
-| `fix`      | Bug fix                         |
-| `docs`     | Documentation only              |
-| `style`    | Formatting, no code change      |
-| `refactor` | Code change without feature/fix |
-| `perf`     | Performance improvement         |
-| `test`     | Adding or updating tests        |
-| `build`    | Build system or dependencies    |
-| `ci`       | CI/CD configuration             |
-| `chore`    | Other maintenance               |
-| `revert`   | Revert a previous commit        |
+Use the `revert` type with the original header in quotes in the body. Include the SHA of the
+reverted commit.
+
+**Example**
+
+```
+revert: feat(api): add beta endpoints
+
+Reverts commit 1a2b3c4.
+```
+
+---
+
+## Release Guidance
+
+`feat` → minor | `fix`/`perf` → patch | `BREAKING CHANGE`/`!` → major

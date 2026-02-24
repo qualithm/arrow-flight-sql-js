@@ -5,153 +5,205 @@ description: "Rules for maintaining the project's working memory"
 
 # CONTEXT.md Maintenance Rules
 
-This file defines how CONTEXT.md must be maintained. These rules are non-negotiable.
+These rules are non-negotiable.
 
 ---
 
 ## Core Invariants
 
-### 1. CONTEXT.md Is Authoritative
+1. **CONTEXT.md Is Authoritative** — When CONTEXT.md conflicts with any other document, CONTEXT.md is correct. Update other documents to match.
 
-When CONTEXT.md conflicts with any other document (README, code comments), CONTEXT.md is correct.
-Update other documents to match, not the reverse.
+2. **Learnings Are Append-Only** — Never edit, delete, or reorder. Only append new rows.
 
-### 2. Learnings Are Append-Only
+3. **Current Reality Contains Only Present Facts** — Describe what exists now. Forbidden: "will be", "planned for", "should support", "eventually".
 
-The "Learnings" section must never be:
+4. **No Future Tense in Reality Sections** — System Intent, Current Reality, and Locked Decisions use present/past tense only. Future work goes in Work Queue or Open Decisions.
 
-- Edited (except typo fixes that don't change meaning)
-- Deleted
-- Reordered
-
-Only append new rows at the bottom of the table.
-
-Format: Table with Date, Learning columns
-
-### 3. Current Reality Contains Only Present Facts
-
-"Current Reality" must describe **what exists right now**, not:
-
-- What used to exist
-- What will exist
-- What should exist
-- What might exist
-
-❌ Forbidden:
-
-- "Will be implemented..."
-- "Planned for..."
-- "Should support..."
-- "Eventually..."
-
-✅ Required:
-
-- "Exists and works"
-- "Implemented but untested"
-- "Partially complete: X works, Y does not"
-
-### 4. No Future Tense in Reality Sections
-
-These sections must use present or past tense only:
-
-- System Intent
-- Current Reality
-- Locked Decisions
-
-Future work belongs in:
-
-- Next Milestones
-- Open Decisions & Risks
-
-### 5. Contradictions Must Be Resolved
-
-If you notice a contradiction between sections:
-
-1. Stop
-2. Determine which represents reality
-3. Fix the incorrect section
-4. Add a Learning entry explaining the correction
-
-Never leave contradictions unaddressed.
+5. **Contradictions Must Be Resolved** — Stop, determine reality, fix the incorrect section, add a Learning entry.
 
 ---
 
-## Section-Specific Rules
+## Section Rules
 
 ### System Intent
 
-- One paragraph describing what the system does
-- Present tense
-- No implementation details
+- 1-2 paragraph summary + "Key capabilities" bullet list
+- Present tense, rarely changes
+- Optional "Scope" boundary statement
 
 ### Current Reality
 
-#### Architecture Table
+- Must match actual codebase; update immediately when code changes
+- Tables only (no bullet lists for inventories)
+- No commentary paragraphs (warnings go in Risks or Learnings)
+- Status values: `Complete` | `Partial` | `Operational` | `Stub` | `Not started`
 
-- Only include technologies actually in use
-- Update when adding/removing dependencies
+**Subsection order** (include only applicable):
 
-#### Modules Table
-
-- List all top-level modules with one-line descriptions
-- Keep alphabetically sorted
+| Subsection | Format |
+|------------|--------|
+| Architecture | Component \| Technology |
+| File Structure | Directory \| Purpose |
+| Components/Modules/Crates | Name \| Purpose |
+| Features | Feature \| Status \| Notes |
+| API Endpoints | Category \| Endpoints |
+| Security Configuration | Feature \| Status \| Notes |
 
 ### Locked Decisions
 
-- Numbered list
-- Each entry: **Bold title** — Brief explanation
-- Only add when a decision is truly final
+- Format: `N. **Topic** — Rationale`
+- Numbered sequentially, no intro paragraph
+- Removal requires explicit approval
 
 ### Open Decisions & Risks
 
-#### Open Decisions Table
+- Use unique IDs: OD-1, OD-2..., R-1, R-2...
+- Move resolved decisions to Locked Decisions; remove mitigated risks
+- Empty section placeholder: `| — | None | — |`
 
-| Column   | Content                     |
-| -------- | --------------------------- |
-| ID       | Sequential number           |
-| Question | The decision to be made     |
-| Context  | Why it matters, constraints |
-
-#### Risks Table
-
-| Column     | Content                   |
-| ---------- | ------------------------- |
-| ID         | Sequential number         |
-| Risk       | What could go wrong       |
-| Impact     | Consequence if it happens |
-| Mitigation | How we're addressing it   |
+| Table | Columns |
+|-------|---------|
+| Open Decisions | ID \| Question \| Context |
+| Risks | ID \| Risk \| Impact \| Mitigation |
 
 ### Work In Flight
 
-| Column  | Content                         |
-| ------- | ------------------------------- |
-| ID      | Sequential number               |
-| Agent   | Who is working (human or AI ID) |
-| Started | ISO 8601 timestamp              |
-| Task    | Brief description               |
-| Files   | Affected files/directories      |
-
-Rules:
-
-- Claim before starting
+- Claim before starting with timestamp
 - Remove within 24 hours of completion
-- Check for conflicts before claiming
+- Format: `ID | Agent | Started | Task | Files`
 
-### Next Milestones
+### Work Queue
 
-- Ordered list of upcoming work
-- Each item: brief title + optional description
-- Move to "Current Reality" when complete
+- Ordered by priority, semantic names (e.g., "Core Protocol", not "M1")
+- Format: `### Semantic Title` with `- [ ]` task checklists
+- Optional `Acceptance:` line with measurable criteria
+- Move completed items to Current Reality
 
 ### Learnings
 
-| Column   | Content          |
-| -------- | ---------------- |
-| Date     | YYYY-MM-DD       |
-| Learning | What was learned |
-
-Rules:
-
 - **Append-only** — never edit or delete
-- Add when discovering non-obvious solutions
-- Add when mistakes teach something valuable
+- Intro line: `> Append-only. Never edit or delete existing entries.`
+- Format: `Date | Learning`
+
+---
+
+## Required Sections (in order)
+
+1. Header block (title, authority statement)
+2. System Intent
+3. Current Reality
+4. Locked Decisions
+5. Open Decisions & Risks
+6. Work In Flight
+7. Work Queue
+8. Learnings
+
+---
+
+## Forbidden Content
+
+- External Dependencies sections (use package.json/Cargo.toml)
+- Environment Variables sections (use env-example)
+- References to non-existent files
+- Future tense in Current Reality
+- Emoji in status values
+- Likelihood columns in Risks
+- Commentary paragraphs in Current Reality
+
+---
+
+## Template
+
+```markdown
+# CONTEXT.md
+
+> **This is the single source of truth for this repository.**
+> When CONTEXT.md conflicts with any other document, CONTEXT.md is correct.
+
+---
+
+## System Intent
+
+[1-2 paragraph summary]
+
+**Key capabilities:**
+- [Capability]
+
+**Scope:** [Optional boundary]
+
+---
+
+## Current Reality
+
+### Architecture
+
+| Component | Technology |
+| --------- | ---------- |
+
+### Features
+
+| Feature | Status | Notes |
+| ------- | ------ | ----- |
+
+---
+
+## Locked Decisions
+
+1. **[Topic]** — [Rationale]
+
+---
+
+## Open Decisions & Risks
+
+### Open Decisions
+
+| ID | Question | Context |
+| -- | -------- | ------- |
+
+### Risks
+
+| ID | Risk | Impact | Mitigation |
+| -- | ---- | ------ | ---------- |
+
+---
+
+## Work In Flight
+
+> Claim before starting. Remove within 24h of completion.
+
+| ID | Agent | Started | Task | Files |
+| -- | ----- | ------- | ---- | ----- |
+| —  | —     | —       | None | —     |
+
+---
+
+## Work Queue
+
+### [Semantic Title]
+
+- [ ] [Task]
+
+Acceptance: [Criteria]
+
+---
+
+## Learnings
+
+> Append-only. Never edit or delete existing entries.
+
+| Date | Learning |
+| ---- | -------- |
+```
+
+---
+
+## Compaction
+
+**Triggers**: >400 lines, >30 learnings, >3 completed work items, risks unreviewed >90 days
+
+**Actions**:
+- Archive to `CONTEXT-ARCHIVE.md`: learnings >6 months old (keep 10 recent), deferred decisions >6 months
+- Delete: completed work items (after verified in Current Reality), mitigated risks, resolved decisions (after moving to Locked), stale Work In Flight
+- Consolidate: granular tables → summary rows, related learnings → single entry
+
+**Log**: `YYYY-MM-DD | Compacted CONTEXT.md; archived N learnings, removed M work items`
