@@ -1,5 +1,9 @@
 # Arrow Flight SQL JS
 
+[![CI](https://github.com/qualithm/arrow-flight-sql-js/actions/workflows/ci.yaml/badge.svg)](https://github.com/qualithm/arrow-flight-sql-js/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/qualithm/arrow-flight-sql-js/graph/badge.svg)](https://codecov.io/gh/qualithm/arrow-flight-sql-js)
+[![npm](https://img.shields.io/npm/v/@qualithm/arrow-flight-sql-js)](https://www.npmjs.com/package/@qualithm/arrow-flight-sql-js)
+
 Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
 SQL-specific functionality on top of Arrow Flight for database interactions. Built on
