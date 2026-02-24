@@ -11,15 +11,19 @@ These rules are non-negotiable.
 
 ## Core Invariants
 
-1. **CONTEXT.md Is Authoritative** — When CONTEXT.md conflicts with any other document, CONTEXT.md is correct. Update other documents to match.
+1. **CONTEXT.md Is Authoritative** — When CONTEXT.md conflicts with any other document, CONTEXT.md
+   is correct. Update other documents to match.
 
 2. **Learnings Are Append-Only** — Never edit, delete, or reorder. Only append new rows.
 
-3. **Current Reality Contains Only Present Facts** — Describe what exists now. Forbidden: "will be", "planned for", "should support", "eventually".
+3. **Current Reality Contains Only Present Facts** — Describe what exists now. Forbidden: "will be",
+   "planned for", "should support", "eventually".
 
-4. **No Future Tense in Reality Sections** — System Intent, Current Reality, and Locked Decisions use present/past tense only. Future work goes in Work Queue or Open Decisions.
+4. **No Future Tense in Reality Sections** — System Intent, Current Reality, and Locked Decisions
+   use present/past tense only. Future work goes in Work Queue or Open Decisions.
 
-5. **Contradictions Must Be Resolved** — Stop, determine reality, fix the incorrect section, add a Learning entry.
+5. **Contradictions Must Be Resolved** — Stop, determine reality, fix the incorrect section, add a
+   Learning entry.
 
 ---
 
@@ -40,14 +44,14 @@ These rules are non-negotiable.
 
 **Subsection order** (include only applicable):
 
-| Subsection | Format |
-|------------|--------|
-| Architecture | Component \| Technology |
-| File Structure | Directory \| Purpose |
-| Components/Modules/Crates | Name \| Purpose |
-| Features | Feature \| Status \| Notes |
-| API Endpoints | Category \| Endpoints |
-| Security Configuration | Feature \| Status \| Notes |
+| Subsection                | Format                     |
+| ------------------------- | -------------------------- |
+| Architecture              | Component \| Technology    |
+| File Structure            | Directory \| Purpose       |
+| Components/Modules/Crates | Name \| Purpose            |
+| Features                  | Feature \| Status \| Notes |
+| API Endpoints             | Category \| Endpoints      |
+| Security Configuration    | Feature \| Status \| Notes |
 
 ### Locked Decisions
 
@@ -61,10 +65,10 @@ These rules are non-negotiable.
 - Move resolved decisions to Locked Decisions; remove mitigated risks
 - Empty section placeholder: `| — | None | — |`
 
-| Table | Columns |
-|-------|---------|
-| Open Decisions | ID \| Question \| Context |
-| Risks | ID \| Risk \| Impact \| Mitigation |
+| Table          | Columns                            |
+| -------------- | ---------------------------------- |
+| Open Decisions | ID \| Question \| Context          |
+| Risks          | ID \| Risk \| Impact \| Mitigation |
 
 ### Work In Flight
 
@@ -117,8 +121,8 @@ These rules are non-negotiable.
 ```markdown
 # CONTEXT.md
 
-> **This is the single source of truth for this repository.**
-> When CONTEXT.md conflicts with any other document, CONTEXT.md is correct.
+> **This is the single source of truth for this repository.** When CONTEXT.md conflicts with any
+> other document, CONTEXT.md is correct.
 
 ---
 
@@ -127,6 +131,7 @@ These rules are non-negotiable.
 [1-2 paragraph summary]
 
 **Key capabilities:**
+
 - [Capability]
 
 **Scope:** [Optional boundary]
@@ -157,13 +162,13 @@ These rules are non-negotiable.
 
 ### Open Decisions
 
-| ID | Question | Context |
-| -- | -------- | ------- |
+| ID  | Question | Context |
+| --- | -------- | ------- |
 
 ### Risks
 
-| ID | Risk | Impact | Mitigation |
-| -- | ---- | ------ | ---------- |
+| ID  | Risk | Impact | Mitigation |
+| --- | ---- | ------ | ---------- |
 
 ---
 
@@ -171,9 +176,9 @@ These rules are non-negotiable.
 
 > Claim before starting. Remove within 24h of completion.
 
-| ID | Agent | Started | Task | Files |
-| -- | ----- | ------- | ---- | ----- |
-| —  | —     | —       | None | —     |
+| ID  | Agent | Started | Task | Files |
+| --- | ----- | ------- | ---- | ----- |
+| —   | —     | —       | None | —     |
 
 ---
 
@@ -202,8 +207,11 @@ Acceptance: [Criteria]
 **Triggers**: >400 lines, >30 learnings, >3 completed work items, risks unreviewed >90 days
 
 **Actions**:
-- Archive to `CONTEXT-ARCHIVE.md`: learnings >6 months old (keep 10 recent), deferred decisions >6 months
-- Delete: completed work items (after verified in Current Reality), mitigated risks, resolved decisions (after moving to Locked), stale Work In Flight
+
+- Archive to `CONTEXT-ARCHIVE.md`: learnings >6 months old (keep 10 recent), deferred decisions >6
+  months
+- Delete: completed work items (after verified in Current Reality), mitigated risks, resolved
+  decisions (after moving to Locked), stale Work In Flight
 - Consolidate: granular tables → summary rows, related learnings → single entry
 
 **Log**: `YYYY-MM-DD | Compacted CONTEXT.md; archived N learnings, removed M work items`

@@ -11,7 +11,8 @@ description: "Guidelines for writing commit messages"
 type(scope)!: subject
 ```
 
-- **type**: `feat` | `fix` | `docs` | `style` | `refactor` | `perf` | `test` | `build` | `ci` | `chore` | `revert`
+- **type**: `feat` | `fix` | `docs` | `style` | `refactor` | `perf` | `test` | `build` | `ci` |
+  `chore` | `revert`
 - **scope**: _(optional)_ area affected, e.g. `parser`, `ui`
 - **!**: _(optional)_ indicates a breaking change
 - **subject**: imperative, lowercase, no trailing period
