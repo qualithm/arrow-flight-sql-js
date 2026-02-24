@@ -14,6 +14,14 @@ Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 Extends Arrow Flight with SQL-specific functionality for database interactions. Built on top of
 `@qualithm/arrow-flight-js` as a peer dependency.
 
+**Key capabilities:**
+
+- SQL query execution with Arrow result sets
+- Prepared statement lifecycle management
+- Transaction support (begin, commit, rollback)
+- Database metadata queries (catalogs, schemas, tables, types)
+- Parameter binding for prepared statements
+
 ---
 
 ## Current Reality
@@ -121,19 +129,22 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 | ID  | Risk                            | Impact | Mitigation                               |
 | --- | ------------------------------- | ------ | ---------------------------------------- |
-| R1  | arrow-flight-js API instability | High   | Develop both libraries in tandem         |
-| R2  | Server compatibility variations | Medium | Test against multiple Flight SQL servers |
+| R-1 | arrow-flight-js API instability | High   | Develop both libraries in tandem         |
+| R-2 | Server compatibility variations | Medium | Test against multiple Flight SQL servers |
 
 ---
 
 ## Work In Flight
 
+> Claim work before starting. Include start timestamp. Remove within 24 hours of completion.
+
 | ID  | Agent | Started | Task | Files |
 | --- | ----- | ------- | ---- | ----- |
+| —   | —     | —       | None | —     |
 
 ---
 
-## Next Milestones
+## Work Queue
 
 ### Coverage & Documentation
 
