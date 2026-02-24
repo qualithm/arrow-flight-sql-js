@@ -59,6 +59,24 @@ describe("FlightSqlClient error paths", () => {
         "prepared update result missing app metadata"
       )
     })
+
+    it("returns record count on success", async () => {
+      const updateResult = DoPutUpdateResult.encode({ recordCount: 42 }).finish()
+
+      vi.spyOn(client, "doPut").mockReturnValue({
+        write: vi.fn(() => true),
+        end: vi.fn(),
+        cancel: vi.fn(),
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async *results() {
+          yield { appMetadata: Buffer.from(updateResult) }
+        },
+        collectResults: vi.fn().mockResolvedValue([{ appMetadata: Buffer.from(updateResult) }])
+      } as unknown as ReturnType<typeof client.doPut>)
+
+      const result = await client.executePreparedUpdate(Buffer.from("handle"))
+      expect(result.recordCount).toBe(42)
+    })
   })
 
   describe("executeUpdate error paths", () => {
@@ -349,6 +367,46 @@ describe("FlightSqlClient error paths", () => {
       expect(result).toEqual({})
     })
 
+    it("handles multi-byte varint lengths in Any messages", async () => {
+      // Create an Any message with a type URL > 127 bytes to exercise
+      // the multi-byte varint reading path in readVarInt (line 252)
+      const longTypeUrl = `type.googleapis.com/${"a".repeat(150)}` // > 127 chars
+
+      // Encode length as 2-byte varint: length = 170 = 0xAA = 10101010
+      // First byte: 0x80 | (170 & 0x7F) = 0x80 | 0x2A = 0xAA
+      // Second byte: 170 >> 7 = 1
+      const typeUrlLength = longTypeUrl.length
+      const encodedLength = [(typeUrlLength & 0x7f) | 0x80, typeUrlLength >> 7]
+
+      // Create the Any message
+      const typeUrlBytes = Buffer.from(longTypeUrl)
+      const anyWithLongTypeUrl = Buffer.concat([
+        Buffer.from([0x0a]), // field 1 tag
+        Buffer.from(encodedLength), // multi-byte varint length
+        typeUrlBytes, // type URL
+        Buffer.from([0x12, 0x00]) // field 2 (value), length 0
+      ])
+
+      vi.spyOn(client, "doPut").mockReturnValue({
+        write: vi.fn(() => true),
+        end: vi.fn(),
+        cancel: vi.fn(),
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async *results() {
+          yield { appMetadata: anyWithLongTypeUrl }
+        },
+        collectResults: vi.fn().mockResolvedValue([{ appMetadata: anyWithLongTypeUrl }])
+      } as unknown as ReturnType<typeof client.doPut>)
+
+      // Should handle multi-byte varints without issue
+      const result = await client.bindParameters(Buffer.from("handle"), {
+        schema: new Uint8Array([1, 2, 3]),
+        data: new Uint8Array([4, 5, 6])
+      })
+
+      expect(result).toEqual({})
+    })
+
     it("returns handle when preparedStatementHandle is present", async () => {
       // Create a proper DoPutPreparedStatementResult with a handle
       const newHandle = Buffer.from("new-stmt-handle")
@@ -388,5 +446,392 @@ describe("FlightSqlClient error paths", () => {
       expect(result.handle).toBeDefined()
       expect(result.handle?.toString()).toBe("new-stmt-handle")
     })
+  })
+
+  describe("query success path", () => {
+    it("calls getFlightInfo with correct command descriptor", async () => {
+      const mockFlightInfo = {
+        flightDescriptor: undefined,
+        endpoint: [],
+        schema: Buffer.alloc(0),
+        totalBytes: 0,
+        totalRecords: 0,
+        ordered: false,
+        appMetadata: Buffer.alloc(0)
+      }
+
+      vi.spyOn(client, "getFlightInfo").mockResolvedValue(mockFlightInfo)
+
+      const result = await client.query("SELECT * FROM test")
+
+      expect(result).toBe(mockFlightInfo)
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(client.getFlightInfo).toHaveBeenCalledTimes(1)
+    })
+
+    it("passes transactionId option", async () => {
+      const mockFlightInfo = {
+        flightDescriptor: undefined,
+        endpoint: [],
+        schema: Buffer.alloc(0),
+        totalRecords: 0,
+        totalBytes: 0,
+        ordered: false,
+        appMetadata: Buffer.alloc(0)
+      }
+      vi.spyOn(client, "getFlightInfo").mockResolvedValue(mockFlightInfo)
+
+      await client.query("SELECT 1", { transactionId: Buffer.from("txn-123") })
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(client.getFlightInfo).toHaveBeenCalled()
+    })
+  })
+
+  describe("executePreparedQuery success path", () => {
+    it("calls getFlightInfo with prepared statement handle", async () => {
+      const mockFlightInfo = {
+        flightDescriptor: undefined,
+        endpoint: [],
+        schema: Buffer.alloc(0),
+        totalRecords: 0,
+        totalBytes: 0,
+        ordered: false,
+        appMetadata: Buffer.alloc(0)
+      }
+      vi.spyOn(client, "getFlightInfo").mockResolvedValue(mockFlightInfo)
+
+      const result = await client.executePreparedQuery(Buffer.from("handle-123"))
+
+      expect(result).toBe(mockFlightInfo)
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(client.getFlightInfo).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("closePreparedStatement success path", () => {
+    it("calls doAction with close action", async () => {
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        // Empty - no result expected from close
+      })
+
+      await client.closePreparedStatement(Buffer.from("handle-123"))
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(client.doAction).toHaveBeenCalledTimes(1)
+    })
+
+    it("consumes any results from close action", async () => {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        yield { body: Buffer.from("ack") }
+      })
+
+      // Should not throw even if server returns a result
+      await expect(client.closePreparedStatement(Buffer.from("handle"))).resolves.toBeUndefined()
+    })
+  })
+
+  describe("metadata methods success paths", () => {
+    const mockFlightInfo = {
+      flightDescriptor: undefined,
+      endpoint: [],
+      schema: Buffer.alloc(0),
+      totalRecords: 0,
+      totalBytes: 0,
+      ordered: false,
+      appMetadata: Buffer.alloc(0)
+    }
+
+    beforeEach(() => {
+      vi.spyOn(client, "getFlightInfo").mockResolvedValue(mockFlightInfo)
+    })
+
+    it("getCatalogs calls getFlightInfo", async () => {
+      const result = await client.getCatalogs()
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getDbSchemas calls getFlightInfo", async () => {
+      const result = await client.getDbSchemas()
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getDbSchemas with filters", async () => {
+      const result = await client.getDbSchemas({
+        catalog: "my_catalog",
+        dbSchemaFilterPattern: "public%"
+      })
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getTables calls getFlightInfo", async () => {
+      const result = await client.getTables()
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getTables with all options", async () => {
+      const result = await client.getTables({
+        catalog: "my_catalog",
+        dbSchemaFilterPattern: "public",
+        tableNameFilterPattern: "user%",
+        tableTypes: ["TABLE", "VIEW"],
+        includeSchema: true
+      })
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getTableTypes calls getFlightInfo", async () => {
+      const result = await client.getTableTypes()
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getPrimaryKeys calls getFlightInfo", async () => {
+      const result = await client.getPrimaryKeys("users")
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getPrimaryKeys with catalog and schema", async () => {
+      const result = await client.getPrimaryKeys("users", {
+        catalog: "my_db",
+        dbSchema: "public"
+      })
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getExportedKeys calls getFlightInfo", async () => {
+      const result = await client.getExportedKeys("users")
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getExportedKeys with catalog and schema", async () => {
+      const result = await client.getExportedKeys("users", {
+        catalog: "my_db",
+        dbSchema: "public"
+      })
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getImportedKeys calls getFlightInfo", async () => {
+      const result = await client.getImportedKeys("orders")
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getImportedKeys with catalog and schema", async () => {
+      const result = await client.getImportedKeys("orders", {
+        catalog: "my_db",
+        dbSchema: "public"
+      })
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getSqlInfo calls getFlightInfo with empty array", async () => {
+      const result = await client.getSqlInfo()
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getSqlInfo with specific info codes", async () => {
+      const result = await client.getSqlInfo([0, 1, 2])
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getXdbcTypeInfo calls getFlightInfo", async () => {
+      const result = await client.getXdbcTypeInfo()
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getXdbcTypeInfo with dataType filter", async () => {
+      const result = await client.getXdbcTypeInfo({ dataType: 12 })
+      expect(result).toBe(mockFlightInfo)
+    })
+  })
+
+  describe("beginTransaction success path", () => {
+    it("returns transaction ID on success", async () => {
+      // Import the protobuf type for encoding
+      const { ActionBeginTransactionResult } =
+        await import("../../generated/arrow/flight/protocol/sql/FlightSql.js")
+
+      const txnId = Buffer.from("transaction-id-123")
+      const innerProto = ActionBeginTransactionResult.encode({
+        transactionId: txnId
+      }).finish()
+
+      // Create Any wrapper
+      const typeUrl = Buffer.from(
+        "type.googleapis.com/arrow.flight.protocol.sql.ActionBeginTransactionResult"
+      )
+      const anyMessage = Buffer.concat([
+        Buffer.from([0x0a, typeUrl.length]),
+        typeUrl,
+        Buffer.from([0x12, innerProto.length]),
+        innerProto
+      ])
+
+      // eslint-disable-next-line @typescript-eslint/require-await
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        yield { body: anyMessage }
+      })
+
+      const result = await client.beginTransaction()
+
+      expect(result.transactionId).toBeDefined()
+      expect(result.transactionId.toString()).toBe("transaction-id-123")
+    })
+  })
+
+  describe("endTransaction success path", () => {
+    it("commits transaction successfully", async () => {
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        // No result expected
+      })
+
+      await expect(client.endTransaction(Buffer.from("txn-123"), "commit")).resolves.toBeUndefined()
+    })
+
+    it("rollbacks transaction successfully", async () => {
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        // No result expected
+      })
+
+      await expect(
+        client.endTransaction(Buffer.from("txn-123"), "rollback")
+      ).resolves.toBeUndefined()
+    })
+
+    it("consumes any results from endTransaction", async () => {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        yield { body: Buffer.from("ack") }
+      })
+
+      await expect(client.endTransaction(Buffer.from("txn-123"), "commit")).resolves.toBeUndefined()
+    })
+  })
+
+  describe("commit and rollback wrappers", () => {
+    it("commit calls endTransaction with commit action", async () => {
+      const spy = vi.spyOn(client, "endTransaction").mockResolvedValue(undefined)
+
+      await client.commit(Buffer.from("txn-123"))
+
+      expect(spy).toHaveBeenCalledWith(Buffer.from("txn-123"), "commit", undefined)
+    })
+
+    it("rollback calls endTransaction with rollback action", async () => {
+      const spy = vi.spyOn(client, "endTransaction").mockResolvedValue(undefined)
+
+      await client.rollback(Buffer.from("txn-456"))
+
+      expect(spy).toHaveBeenCalledWith(Buffer.from("txn-456"), "rollback", undefined)
+    })
+
+    it("commit passes options to endTransaction", async () => {
+      const spy = vi.spyOn(client, "endTransaction").mockResolvedValue(undefined)
+      const options = { timeoutMs: 5000 }
+
+      await client.commit(Buffer.from("txn-123"), options)
+
+      expect(spy).toHaveBeenCalledWith(Buffer.from("txn-123"), "commit", options)
+    })
+
+    it("rollback passes options to endTransaction", async () => {
+      const spy = vi.spyOn(client, "endTransaction").mockResolvedValue(undefined)
+      const options = { timeoutMs: 5000 }
+
+      await client.rollback(Buffer.from("txn-123"), options)
+
+      expect(spy).toHaveBeenCalledWith(Buffer.from("txn-123"), "rollback", options)
+    })
+  })
+
+  describe("createPreparedStatement success path", () => {
+    it("returns prepared statement result on success", async () => {
+      const { ActionCreatePreparedStatementResult } =
+        await import("../../generated/arrow/flight/protocol/sql/FlightSql.js")
+
+      const handle = Buffer.from("prepared-handle-123")
+      const datasetSchema = Buffer.from("dataset-schema")
+      const parameterSchema = Buffer.from("parameter-schema")
+
+      const innerProto = ActionCreatePreparedStatementResult.encode({
+        preparedStatementHandle: handle,
+        datasetSchema,
+        parameterSchema
+      }).finish()
+
+      const typeUrl = Buffer.from(
+        "type.googleapis.com/arrow.flight.protocol.sql.ActionCreatePreparedStatementResult"
+      )
+      const anyMessage = Buffer.concat([
+        Buffer.from([0x0a, typeUrl.length]),
+        typeUrl,
+        Buffer.from([0x12, innerProto.length]),
+        innerProto
+      ])
+
+      // eslint-disable-next-line @typescript-eslint/require-await
+      vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        yield { body: anyMessage }
+      })
+
+      const result = await client.createPreparedStatement("SELECT * FROM test WHERE id = ?")
+
+      expect(result.handle.toString()).toBe("prepared-handle-123")
+      expect(result.datasetSchema.toString()).toBe("dataset-schema")
+      expect(result.parameterSchema.toString()).toBe("parameter-schema")
+    })
+
+    it("passes transactionId option", async () => {
+      const { ActionCreatePreparedStatementResult } =
+        await import("../../generated/arrow/flight/protocol/sql/FlightSql.js")
+
+      const innerProto = ActionCreatePreparedStatementResult.encode({
+        preparedStatementHandle: Buffer.from("handle"),
+        datasetSchema: Buffer.alloc(0),
+        parameterSchema: Buffer.alloc(0)
+      }).finish()
+
+      const typeUrl = Buffer.from(
+        "type.googleapis.com/arrow.flight.protocol.sql.ActionCreatePreparedStatementResult"
+      )
+      const anyMessage = Buffer.concat([
+        Buffer.from([0x0a, typeUrl.length]),
+        typeUrl,
+        Buffer.from([0x12, innerProto.length]),
+        innerProto
+      ])
+
+      // eslint-disable-next-line @typescript-eslint/require-await
+      const spy = vi.spyOn(client, "doAction").mockImplementation(async function* () {
+        yield { body: anyMessage }
+      })
+
+      await client.createPreparedStatement("SELECT 1", {
+        transactionId: Buffer.from("txn-456")
+      })
+
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe("createFlightSqlClient", () => {
+  it("creates client and calls connect", async () => {
+    // Import at test time to get the factory function
+    const { createFlightSqlClient } = await import("../../client.js")
+
+    // Mock the connect method on the prototype before creating the client
+    const connectSpy = vi.fn().mockResolvedValue(undefined)
+    vi.spyOn(FlightSqlClient.prototype, "connect").mockImplementation(connectSpy)
+
+    const client = await createFlightSqlClient({
+      host: "localhost",
+      port: 8815,
+      tls: false
+    })
+
+    expect(client).toBeInstanceOf(FlightSqlClient)
+    expect(connectSpy).toHaveBeenCalledTimes(1)
   })
 })

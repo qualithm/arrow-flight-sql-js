@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type { FlightSqlClient } from "../../client.js"
 import { FlightSqlError } from "../../errors.js"
-import { flightInfoToTable, iterateResults, ticketToTable } from "../../results.js"
+import { flightInfoToTable, iterateResults, queryToTable, ticketToTable } from "../../results.js"
 
 // Mock data for testing
 function createMockTicket(data = "test-ticket"): Ticket {
@@ -297,5 +297,70 @@ describe("iterateResults", () => {
     expect(results).toHaveLength(0)
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(mockClient.doGet).not.toHaveBeenCalled()
+  })
+})
+
+describe("queryToTable", () => {
+  it("calls client.query with query string and options", async () => {
+    const mockInfo = createMockFlightInfo([{ ticket: createMockTicket() }])
+
+    const mockClient = {
+      query: vi.fn().mockResolvedValue(mockInfo),
+      doGet: vi.fn().mockImplementation(async function* () {
+        yield await Promise.resolve({
+          flightDescriptor: undefined,
+          dataHeader: new Uint8Array([1, 2, 3]),
+          dataBody: new Uint8Array(0),
+          appMetadata: new Uint8Array(0)
+        })
+      })
+    } as unknown as FlightSqlClient
+
+    // This will fail on IPC parsing, but we're testing the call chain
+    try {
+      await queryToTable(mockClient, "SELECT * FROM test", { transactionId: Buffer.from("txn") })
+    } catch {
+      // Expected - invalid IPC bytes
+    }
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(mockClient.query).toHaveBeenCalledWith("SELECT * FROM test", {
+      transactionId: Buffer.from("txn")
+    })
+  })
+
+  it("calls client.query with just query string when no options", async () => {
+    const mockInfo = createMockFlightInfo([{ ticket: createMockTicket() }])
+
+    const mockClient = {
+      query: vi.fn().mockResolvedValue(mockInfo),
+      doGet: vi.fn().mockImplementation(async function* () {
+        yield await Promise.resolve({
+          flightDescriptor: undefined,
+          dataHeader: new Uint8Array([1, 2, 3]),
+          dataBody: new Uint8Array(0),
+          appMetadata: new Uint8Array(0)
+        })
+      })
+    } as unknown as FlightSqlClient
+
+    try {
+      await queryToTable(mockClient, "SELECT 1")
+    } catch {
+      // Expected
+    }
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(mockClient.query).toHaveBeenCalledWith("SELECT 1", undefined)
+  })
+
+  it("propagates query errors", async () => {
+    const mockClient = {
+      query: vi.fn().mockRejectedValue(new FlightSqlError("query failed", "INVALID_QUERY"))
+    } as unknown as FlightSqlClient
+
+    await expect(queryToTable(mockClient, "SELECT * FROM nonexistent")).rejects.toThrow(
+      "query failed"
+    )
   })
 })
