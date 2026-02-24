@@ -1,6 +1,6 @@
 {
   "name": "@qualithm/arrow-flight-sql-js",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Arrow Flight SQL client for JavaScript and TypeScript runtimes.",
   "private": false,
   "type": "module",
