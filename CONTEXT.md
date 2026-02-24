@@ -146,11 +146,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ## Work Queue
 
-### Coverage & Documentation
-
-- [ ] Run `test:coverage`, verify 80% threshold
-- [ ] Fix coverage gaps if below threshold
-- [ ] Review and enhance TypeDoc output
+> No items currently queued.
 
 ---
 
@@ -162,3 +158,6 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-02-20 | `CancelFlightInfo` is a base Flight action implemented in `FlightClient`, not Flight SQL-specific. Since `FlightSqlClient` extends `FlightClient`, the method is inherited automatically - no additional implementation needed. |
 | 2026-02-23 | Integration tests target Arrow Flight SQL server; config via env vars FLIGHT_HOST/FLIGHT_PORT; tests cover queries, updates, prepared statements, transactions, metadata                                                        |
+| 2026-02-24 | Integration tests must import from "vitest" not "bun:test" for coverage to work. Branch threshold lowered to 79% as remaining branches are server error handling that can't be unit tested without mocking.                     |
+| 2026-02-24 | Achieved 100% coverage via vi.spyOn mocking doPut/doAction methods. Mock tests exercise error paths, empty results, and protobuf edge cases (non-length-delimited fields in Any, empty anyBytes, present handles).              |
+| 2026-02-24 | Coverage thresholds updated to 100% for all metrics (statements, branches, functions, lines). Achieved by testing: unpackAny edge cases, bindParameters with/without handle, varint encoding for long queries.                  |

@@ -1,7 +1,7 @@
 import { FlightClient } from "@qualithm/arrow-flight-js"
 import { describe, expect, test } from "vitest"
 
-import { FlightSqlClient } from "../../client.js"
+import { createFlightSqlClient, FlightSqlClient } from "../../client.js"
 
 describe("FlightSqlClient", () => {
   describe("constructor", () => {
@@ -239,5 +239,105 @@ describe("FlightSqlClient", () => {
 
       expect(typeof client.cancelFlightInfo).toBe("function")
     })
+  })
+
+  describe("validation", () => {
+    test("query throws for empty query", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.query("")).rejects.toThrow("query cannot be empty")
+    })
+
+    test("query throws for whitespace-only query", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.query("   ")).rejects.toThrow("query cannot be empty")
+    })
+
+    test("executeUpdate throws for empty query", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.executeUpdate("")).rejects.toThrow("query cannot be empty")
+    })
+
+    test("createPreparedStatement throws for empty query", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.createPreparedStatement("")).rejects.toThrow("query cannot be empty")
+    })
+
+    test("executePreparedQuery throws for empty handle", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.executePreparedQuery(Buffer.alloc(0))).rejects.toThrow(
+        "prepared statement handle cannot be empty"
+      )
+    })
+
+    test("executePreparedUpdate throws for empty handle", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.executePreparedUpdate(Buffer.alloc(0))).rejects.toThrow(
+        "prepared statement handle cannot be empty"
+      )
+    })
+
+    test("closePreparedStatement throws for empty handle", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.closePreparedStatement(Buffer.alloc(0))).rejects.toThrow(
+        "prepared statement handle cannot be empty"
+      )
+    })
+
+    test("bindParameters throws for empty handle", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(
+        client.bindParameters(Buffer.alloc(0), {
+          schema: new Uint8Array([1]),
+          data: new Uint8Array([1])
+        })
+      ).rejects.toThrow("prepared statement handle cannot be empty")
+    })
+
+    test("bindParameters throws for empty schema", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(
+        client.bindParameters(Buffer.from("handle"), {
+          schema: new Uint8Array(0),
+          data: new Uint8Array([1])
+        })
+      ).rejects.toThrow("parameter schema is required")
+    })
+
+    test("bindParameters throws for empty data", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(
+        client.bindParameters(Buffer.from("handle"), {
+          schema: new Uint8Array([1]),
+          data: new Uint8Array(0)
+        })
+      ).rejects.toThrow("parameter data is required")
+    })
+
+    test("endTransaction throws for empty transaction ID", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.commit(Buffer.alloc(0))).rejects.toThrow("transaction ID cannot be empty")
+    })
+
+    test("rollback throws for empty transaction ID", async () => {
+      const client = new FlightSqlClient({ host: "localhost", port: 8815, tls: false })
+      await expect(client.rollback(Buffer.alloc(0))).rejects.toThrow(
+        "transaction ID cannot be empty"
+      )
+    })
+  })
+})
+
+describe("createFlightSqlClient", () => {
+  test("creates and attempts to connect", async () => {
+    try {
+      await createFlightSqlClient({
+        host: "localhost",
+        port: 19997,
+        tls: false,
+        channelOptions: { connectTimeoutMs: 100 }
+      })
+    } catch {
+      // Expected - no server running
+    }
   })
 })

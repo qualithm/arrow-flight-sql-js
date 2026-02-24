@@ -3,7 +3,7 @@
  *
  * Requires a running Arrow Flight SQL server with test fixtures.
  */
-import { afterAll, beforeAll, describe, expect, it } from "bun:test"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createFlightSqlClient, type FlightSqlClient, queryToTable } from "../../index"
 import { config } from "./config"

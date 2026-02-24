@@ -3,7 +3,7 @@
  *
  * Requires a running Arrow Flight SQL server.
  */
-import { afterAll, beforeAll, describe, expect, it } from "bun:test"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createFlightSqlClient, flightInfoToTable, type FlightSqlClient } from "../../index"
 import { config } from "./config"
@@ -191,6 +191,48 @@ describe("Metadata Integration", () => {
       const table = await flightInfoToTable(client, info)
       // May be empty if no primary keys defined
       expect(table.numRows).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe("getExportedKeys", () => {
+    it("returns exported key info (possibly empty)", async () => {
+      const info = await client.getExportedKeys("integers")
+
+      expect(info).toBeDefined()
+
+      const table = await flightInfoToTable(client, info)
+      // May be empty if no foreign keys reference this table
+      expect(table.numRows).toBeGreaterThanOrEqual(0)
+    })
+
+    it("accepts catalog and schema options", async () => {
+      const info = await client.getExportedKeys("integers", {
+        catalog: config.catalog,
+        dbSchema: "public"
+      })
+
+      expect(info).toBeDefined()
+    })
+  })
+
+  describe("getImportedKeys", () => {
+    it("returns imported key info (possibly empty)", async () => {
+      const info = await client.getImportedKeys("integers")
+
+      expect(info).toBeDefined()
+
+      const table = await flightInfoToTable(client, info)
+      // May be empty if no foreign keys in this table
+      expect(table.numRows).toBeGreaterThanOrEqual(0)
+    })
+
+    it("accepts catalog and schema options", async () => {
+      const info = await client.getImportedKeys("integers", {
+        catalog: config.catalog,
+        dbSchema: "public"
+      })
+
+      expect(info).toBeDefined()
     })
   })
 })
