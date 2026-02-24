@@ -20,14 +20,14 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### Architecture
 
-| Component | Technology            |
-| --------- | --------------------- |
-| Language  | TypeScript (ESM-only) |
-| Runtime   | Bun, Node.js 20+      |
-| Build     | TypeScript compiler   |
-| Test      | Bun test runner       |
-| Lint      | ESLint, Prettier      |
-| Docs      | TypeDoc               |
+| Component | Technology             |
+| --------- | ---------------------- |
+| Language  | TypeScript (ESM-only)  |
+| Runtime   | Bun, Node.js 20+, Deno |
+| Build     | TypeScript compiler    |
+| Test      | Vitest                 |
+| Lint      | ESLint, Prettier       |
+| Docs      | TypeDoc                |
 
 ### Modules
 
@@ -183,10 +183,10 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 - [x] Add test connection configuration for Arrow Flight SQL server
 - [x] Create integration test suite (query, update, prepared statements, metadata)
-- [ ] Run tests on Bun (unit + integration)
-- [ ] Run tests on Node.js (unit + integration)
-- [ ] Run tests on Deno (unit + integration)
-- [ ] Enable coverage reporting with threshold enforcement
+- [x] Run tests on Bun (unit + integration)
+- [x] Run tests on Node.js (unit + integration)
+- [x] Run tests on Deno (unit + integration)
+- [x] Enable coverage reporting with threshold enforcement
 - [x] Add test fixtures for Arrow schemas/data (uses test server fixtures)
 
 ---
