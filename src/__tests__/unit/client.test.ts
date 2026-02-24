@@ -1,5 +1,5 @@
 import { FlightClient } from "@qualithm/arrow-flight-js"
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test } from "vitest"
 
 import { FlightSqlClient } from "../../client.js"
 
