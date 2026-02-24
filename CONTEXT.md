@@ -33,10 +33,10 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 | Module       | Purpose                              |
 | ------------ | ------------------------------------ |
-| `index.ts`   | Main entry point                     |
 | `client.ts`  | FlightSqlClient implementation       |
-| `results.ts` | Result set iteration utilities       |
 | `errors.ts`  | Error types and validation functions |
+| `index.ts`   | Main entry point                     |
+| `results.ts` | Result set iteration utilities       |
 
 ### Flight SQL Commands (via DoGet/DoPut/DoAction)
 
@@ -116,7 +116,6 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 | ID  | Question | Context |
 | --- | -------- | ------- |
-| —   | None     | —       |
 
 ### Risks
 
@@ -129,65 +128,14 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ## Work In Flight
 
-> Claim work before starting. Include start timestamp. Remove within 24 hours of completion.
-
 | ID  | Agent | Started | Task | Files |
 | --- | ----- | ------- | ---- | ----- |
-|     |       |         |      |       |
 
 ---
 
 ## Next Milestones
 
-### M1: Project Setup
-
-- [x] Update package.json with correct name/description
-- [x] Add peer dependency on `@qualithm/arrow-flight-js`
-- [x] Define proto file handling for Flight SQL messages
-- [x] Set up proto compilation pipeline
-
-### M2: Core SQL Execution
-
-- [x] `FlightSqlClient` wrapping base `FlightClient`
-- [x] Implement `CommandStatementQuery` (simple queries)
-- [x] Implement `CommandStatementUpdate` (INSERT/UPDATE/DELETE)
-- [x] Result set iteration with Arrow Tables
-
-### M3: Prepared Statements
-
-- [x] Implement `CreatePreparedStatement` action
-- [x] Implement `ClosePreparedStatement` action
-- [x] Implement `CommandPreparedStatementQuery`
-- [x] Implement `CommandPreparedStatementUpdate`
-- [x] Parameter binding API
-
-### M4: Metadata Queries
-
-- [x] Implement `CommandGetCatalogs`
-- [x] Implement `CommandGetDbSchemas`
-- [x] Implement `CommandGetTables`
-- [x] Implement `CommandGetTableTypes`
-- [x] Implement `CommandGetPrimaryKeys`
-- [x] Implement `CommandGetExportedKeys` / `CommandGetImportedKeys`
-- [x] Implement `CommandGetSqlInfo`
-- [x] Implement `CommandGetXdbcTypeInfo`
-
-### M5: Transactions & Polish
-
-- [x] Implement `BeginTransaction` / `EndTransaction`
-- [x] Implement `CancelFlightInfo` (inherited from base FlightClient)
-- [x] Add comprehensive error handling
-- [x] Documentation and examples
-
-### M6: Testing Infrastructure
-
-- [x] Add test connection configuration for Arrow Flight SQL server
-- [x] Create integration test suite (query, update, prepared statements, metadata)
-- [x] Run tests on Bun (unit + integration)
-- [x] Run tests on Node.js (unit + integration)
-- [x] Run tests on Deno (unit + integration)
-- [x] Enable coverage reporting with threshold enforcement
-- [x] Add test fixtures for Arrow schemas/data (uses test server fixtures)
+_All milestones complete. Define new milestones as needed._
 
 ---
 
