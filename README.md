@@ -14,6 +14,7 @@ SQL-specific functionality on top of Arrow Flight for database interactions. Bui
 - Database metadata queries (catalogs, schemas, tables, keys)
 - Query cancellation
 - TypeScript-first with comprehensive type definitions
+- Cross-runtime: Bun, Node.js 20+, Deno
 - Streaming results with async iterables
 - Comprehensive error handling with typed error codes
 - ESM-only, tree-shakeable
@@ -126,7 +127,7 @@ See the [examples](./examples) directory for complete, runnable demonstrations.
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) (recommended) or Node.js 20+
+- [Bun](https://bun.sh/) (recommended), Node.js 20+, or [Deno](https://deno.land/)
 
 ### Setup
 
@@ -148,6 +149,13 @@ bun test
 
 # Integration tests (requires running Arrow Flight SQL server)
 FLIGHT_HOST=localhost FLIGHT_PORT=50051 bun run test:integration
+```
+
+### Benchmarks
+
+```bash
+# Requires running Arrow Flight SQL server
+FLIGHT_HOST=localhost FLIGHT_PORT=50051 bun run bench
 ```
 
 ### Linting & Formatting
