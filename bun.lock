@@ -159,7 +159,7 @@
 
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.0", "", {}, "sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw=="],
 
-    "@qualithm/arrow-flight-js": ["@qualithm/arrow-flight-js@1.7.2", "", { "dependencies": { "@grpc/grpc-js": "1.14.3", "apache-arrow": "21.1.0" } }, "sha512-vG3txcf09cPmI01N0ePthre4CKWn8SoJjvXhviQmIMwj1SLx3Q4V23/b+WiuKaaC3vb8V2mmnzD0zjx1UwlIqQ=="],
+    "@qualithm/arrow-flight-js": ["@qualithm/arrow-flight-js@1.7.5", "", { "dependencies": { "@grpc/grpc-js": "1.14.3", "apache-arrow": "21.1.0" } }, "sha512-JLJSjt94ePsYG0WUZ53QA3mxndAZpiu/FVlAgJ3AivgzuWlAlsOgFrRx4xUEK4/Qn8zfPxp/00Ci/kfFfZJEbQ=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.59.0", "", { "os": "android", "cpu": "arm" }, "sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg=="],
 
