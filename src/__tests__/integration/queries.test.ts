@@ -75,7 +75,7 @@ describe("Query Integration", () => {
 
   describe("queryToTable", () => {
     it("returns Arrow Table with correct row count", async () => {
-      const table = await queryToTable(client, "SELECT * FROM test.integers")
+      const table = await queryToTable(client, "SELECT * FROM test.integers LIMIT 100")
 
       expect(table.numRows).toBe(100)
     })

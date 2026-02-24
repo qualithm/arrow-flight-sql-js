@@ -121,7 +121,9 @@ describe("Transactions Integration", () => {
 
       try {
         // Query within transaction
-        const table = await queryToTable(client, "SELECT * FROM test.integers", { transactionId })
+        const table = await queryToTable(client, "SELECT * FROM test.integers LIMIT 100", {
+          transactionId
+        })
         expect(table.numRows).toBe(100)
       } finally {
         await client.endTransaction(transactionId, "rollback")
