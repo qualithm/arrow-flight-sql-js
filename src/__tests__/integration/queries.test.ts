@@ -42,18 +42,14 @@ describe("Query Integration", () => {
       const info = await client.query("SELECT * FROM test.integers")
 
       // test.integers has 100 records, but server may return -1 (unknown)
-      expect(
-        info.totalRecords === 100 || info.totalRecords === -1n || info.totalRecords === -1
-      ).toBe(true)
+      expect(info.totalRecords === 100 || info.totalRecords === -1).toBe(true)
     })
 
     it("handles empty result set", async () => {
       const info = await client.query("SELECT * FROM test.empty")
 
       // Server may return 0 or -1 (unknown) for empty result
-      expect(info.totalRecords === 0 || info.totalRecords === -1n || info.totalRecords === -1).toBe(
-        true
-      )
+      expect(info.totalRecords === 0 || info.totalRecords === -1).toBe(true)
     })
 
     it("returns error for invalid SQL", async () => {
