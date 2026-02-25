@@ -24,7 +24,7 @@
         "vitest": "latest",
       },
       "peerDependencies": {
-        "@qualithm/arrow-flight-js": ">=1.0.0",
+        "@qualithm/arrow-flight-js": ">=1.7.6",
         "apache-arrow": ">=17.0.0",
       },
     },
@@ -159,7 +159,7 @@
 
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.0", "", {}, "sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw=="],
 
-    "@qualithm/arrow-flight-js": ["@qualithm/arrow-flight-js@1.7.5", "", { "dependencies": { "@grpc/grpc-js": "1.14.3", "apache-arrow": "21.1.0" } }, "sha512-JLJSjt94ePsYG0WUZ53QA3mxndAZpiu/FVlAgJ3AivgzuWlAlsOgFrRx4xUEK4/Qn8zfPxp/00Ci/kfFfZJEbQ=="],
+    "@qualithm/arrow-flight-js": ["@qualithm/arrow-flight-js@1.7.6", "", { "dependencies": { "@bufbuild/protobuf": "^2.11.0", "@grpc/grpc-js": "1.14.3", "apache-arrow": "21.1.0" } }, "sha512-mO6UdnB519Rdr+jFrzwc1HdlvBHtQhIlP1rJwBEJT+KLYBIVCnIvzpC3SFN7U91LA9DZ36vdeILhh1EjryS4Wg=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.59.0", "", { "os": "android", "cpu": "arm" }, "sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg=="],
 
