@@ -625,6 +625,21 @@ describe("FlightSqlClient error paths", () => {
       expect(result).toBe(mockFlightInfo)
     })
 
+    it("getCrossReference calls getFlightInfo", async () => {
+      const result = await client.getCrossReference("users", "orders")
+      expect(result).toBe(mockFlightInfo)
+    })
+
+    it("getCrossReference with catalog and schema options", async () => {
+      const result = await client.getCrossReference("users", "orders", {
+        pkCatalog: "my_db",
+        pkDbSchema: "public",
+        fkCatalog: "my_db",
+        fkDbSchema: "public"
+      })
+      expect(result).toBe(mockFlightInfo)
+    })
+
     it("getSqlInfo calls getFlightInfo with empty array", async () => {
       const result = await client.getSqlInfo()
       expect(result).toBe(mockFlightInfo)

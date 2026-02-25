@@ -100,17 +100,18 @@ See the [examples](./examples) directory for complete, runnable demonstrations.
 
 ### Metadata
 
-| Method              | Description                          |
-| ------------------- | ------------------------------------ |
-| `getCatalogs()`     | List available catalogs              |
-| `getDbSchemas()`    | List database schemas                |
-| `getTables()`       | List tables with optional filtering  |
-| `getTableTypes()`   | List supported table types           |
-| `getPrimaryKeys()`  | Get primary key info for a table     |
-| `getExportedKeys()` | Get foreign keys referencing a table |
-| `getImportedKeys()` | Get foreign keys from a table        |
-| `getSqlInfo()`      | Get SQL dialect/server capabilities  |
-| `getXdbcTypeInfo()` | Get supported data types             |
+| Method                | Description                          |
+| --------------------- | ------------------------------------ |
+| `getCatalogs()`       | List available catalogs              |
+| `getDbSchemas()`      | List database schemas                |
+| `getTables()`         | List tables with optional filtering  |
+| `getTableTypes()`     | List supported table types           |
+| `getPrimaryKeys()`    | Get primary key info for a table     |
+| `getExportedKeys()`   | Get foreign keys referencing a table |
+| `getImportedKeys()`   | Get foreign keys from a table        |
+| `getCrossReference()` | Get foreign keys between two tables  |
+| `getSqlInfo()`        | Get SQL dialect/server capabilities  |
+| `getXdbcTypeInfo()`   | Get supported data types             |
 
 ### Result Utilities
 

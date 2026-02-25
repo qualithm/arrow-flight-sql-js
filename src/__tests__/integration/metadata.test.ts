@@ -235,4 +235,27 @@ describe("Metadata Integration", () => {
       expect(info).toBeDefined()
     })
   })
+
+  describe("getCrossReference", () => {
+    it("returns cross reference info (possibly empty)", async () => {
+      const info = await client.getCrossReference("integers", "strings")
+
+      expect(info).toBeDefined()
+
+      const table = await flightInfoToTable(client, info)
+      // May be empty if no foreign keys between these tables
+      expect(table.numRows).toBeGreaterThanOrEqual(0)
+    })
+
+    it("accepts catalog and schema options", async () => {
+      const info = await client.getCrossReference("integers", "strings", {
+        pkCatalog: config.catalog,
+        pkDbSchema: "public",
+        fkCatalog: config.catalog,
+        fkDbSchema: "public"
+      })
+
+      expect(info).toBeDefined()
+    })
+  })
 })

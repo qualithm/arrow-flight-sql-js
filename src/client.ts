@@ -28,6 +28,7 @@ import {
   ActionEndTransactionRequest,
   ActionEndTransactionRequest_EndTransaction,
   CommandGetCatalogs,
+  CommandGetCrossReference,
   CommandGetDbSchemas,
   CommandGetExportedKeys,
   CommandGetImportedKeys,
@@ -991,6 +992,48 @@ export class FlightSqlClient extends FlightClient {
     }
     const encoded = CommandGetImportedKeys.encode(command).finish()
     const descriptor = createCommandDescriptor("CommandGetImportedKeys", encoded)
+    return this.getFlightInfo(descriptor, options)
+  }
+
+  /**
+   * Retrieves the cross-reference between two tables (foreign keys in the foreign
+   * table that reference the primary key of the parent table).
+   *
+   * @param pkTable - The parent (primary key) table name
+   * @param fkTable - The foreign key table name
+   * @param options - Optional filtering and call options
+   * @returns Flight information for retrieving cross-reference data
+   * @throws {FlightError} If the request fails
+   *
+   * @example
+   * ```ts
+   * const info = await client.getCrossReference("users", "orders")
+   * const table = await flightInfoToTable(client, info)
+   * for (const row of table) {
+   *   console.log(`${row.fk_table_name}.${row.fk_column_name} -> ${row.pk_table_name}.${row.pk_column_name}`)
+   * }
+   * ```
+   */
+  async getCrossReference(
+    pkTable: string,
+    fkTable: string,
+    options?: CallOptions & {
+      pkCatalog?: string
+      pkDbSchema?: string
+      fkCatalog?: string
+      fkDbSchema?: string
+    }
+  ): Promise<FlightInfo> {
+    const command: CommandGetCrossReference = {
+      pkTable,
+      fkTable,
+      pkCatalog: options?.pkCatalog,
+      pkDbSchema: options?.pkDbSchema,
+      fkCatalog: options?.fkCatalog,
+      fkDbSchema: options?.fkDbSchema
+    }
+    const encoded = CommandGetCrossReference.encode(command).finish()
+    const descriptor = createCommandDescriptor("CommandGetCrossReference", encoded)
     return this.getFlightInfo(descriptor, options)
   }
 

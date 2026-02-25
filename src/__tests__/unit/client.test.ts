@@ -175,6 +175,15 @@ describe("FlightSqlClient", () => {
       expect(typeof client.getImportedKeys).toBe("function")
     })
 
+    test("has getCrossReference method", () => {
+      const client = new FlightSqlClient({
+        host: "localhost",
+        port: 8815
+      })
+
+      expect(typeof client.getCrossReference).toBe("function")
+    })
+
     test("has getSqlInfo method", () => {
       const client = new FlightSqlClient({
         host: "localhost",
