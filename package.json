@@ -1,6 +1,6 @@
 {
   "name": "@qualithm/arrow-flight-sql",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Arrow Flight SQL client for JavaScript and TypeScript runtimes.",
   "private": false,
   "type": "module",
@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@qualithm/arrow-flight": "1.8.0",
+    "@qualithm/arrow-flight": "1.8.1",
     "@types/bun": "1.3.9",
     "@vitest/coverage-v8": "^4.0.18",
     "apache-arrow": "21.1.0",
