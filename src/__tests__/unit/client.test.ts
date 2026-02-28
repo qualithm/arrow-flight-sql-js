@@ -1,4 +1,4 @@
-import { FlightClient } from "@qualithm/arrow-flight-js"
+import { FlightClient } from "@qualithm/arrow-flight"
 import { describe, expect, test } from "vitest"
 
 import { createFlightSqlClient, FlightSqlClient } from "../../client.js"

@@ -1,13 +1,13 @@
-# Arrow Flight SQL JS
+# Arrow Flight SQL
 
 [![CI](https://github.com/qualithm/arrow-flight-sql-js/actions/workflows/ci.yaml/badge.svg)](https://github.com/qualithm/arrow-flight-sql-js/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/qualithm/arrow-flight-sql-js/graph/badge.svg)](https://codecov.io/gh/qualithm/arrow-flight-sql-js)
-[![npm](https://img.shields.io/npm/v/@qualithm/arrow-flight-sql-js)](https://www.npmjs.com/package/@qualithm/arrow-flight-sql-js)
+[![npm](https://img.shields.io/npm/v/@qualithm/arrow-flight-sql)](https://www.npmjs.com/package/@qualithm/arrow-flight-sql)
 
 Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
 SQL-specific functionality on top of Arrow Flight for database interactions. Built on
-[`@qualithm/arrow-flight-js`](https://github.com/qualithm/arrow-flight-js) as a peer dependency.
+[`@qualithm/arrow-flight`](https://github.com/qualithm/arrow-flight-js) as a peer dependency.
 
 ## Features
 
@@ -26,17 +26,17 @@ SQL-specific functionality on top of Arrow Flight for database interactions. Bui
 ## Installation
 
 ```bash
-npm install @qualithm/arrow-flight-sql-js @qualithm/arrow-flight-js apache-arrow
+npm install @qualithm/arrow-flight-sql @qualithm/arrow-flight apache-arrow
 # or
-bun add @qualithm/arrow-flight-sql-js @qualithm/arrow-flight-js apache-arrow
+bun add @qualithm/arrow-flight-sql @qualithm/arrow-flight apache-arrow
 ```
 
-> **Note:** `@qualithm/arrow-flight-js` is a peer dependency and must be installed separately.
+> **Note:** `@qualithm/arrow-flight` is a peer dependency and must be installed separately.
 
 ## Quick Start
 
 ```typescript
-import { createFlightSqlClient, queryToTable } from "@qualithm/arrow-flight-sql-js"
+import { createFlightSqlClient, queryToTable } from "@qualithm/arrow-flight-sql"
 
 const client = await createFlightSqlClient({
   host: "localhost",

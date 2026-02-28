@@ -10,7 +10,7 @@ import {
   FlightClient,
   type FlightClientOptions,
   type FlightInfo
-} from "@qualithm/arrow-flight-js"
+} from "@qualithm/arrow-flight"
 
 import {
   FlightSqlError,

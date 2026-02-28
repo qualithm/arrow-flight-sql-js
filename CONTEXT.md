@@ -12,7 +12,7 @@
 Arrow Flight SQL client for JavaScript and TypeScript runtimes.
 
 Extends Arrow Flight with SQL-specific functionality for database interactions. Built on top of
-`@qualithm/arrow-flight-js` as a peer dependency.
+`@qualithm/arrow-flight` as a peer dependency.
 
 **Key capabilities:**
 
@@ -96,7 +96,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ### Out of Scope
 
-- Base Flight operations (provided by `arrow-flight-js`)
+- Base Flight operations (provided by `arrow-flight`)
 - Server implementation (client-only library)
 - SQL parsing or query building
 - ORM functionality
@@ -105,7 +105,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 ## Locked Decisions
 
-1. **Peer dependency on arrow-flight-js** — Reuse base Flight client
+1. **Peer dependency on arrow-flight** — Reuse base Flight client
 2. **Client-only** — No server implementation
 3. **TypeScript-first** — Type safety for all code
 4. **ESM-only** — Modern standards, tree-shaking
@@ -129,7 +129,7 @@ Extends Arrow Flight with SQL-specific functionality for database interactions. 
 
 | ID  | Risk                            | Impact | Mitigation                               |
 | --- | ------------------------------- | ------ | ---------------------------------------- |
-| R-1 | arrow-flight-js API instability | High   | Develop both libraries in tandem         |
+| R-1 | arrow-flight API instability    | High   | Develop both libraries in tandem         |
 | R-2 | Server compatibility variations | Medium | Test against multiple Flight SQL servers |
 
 ---

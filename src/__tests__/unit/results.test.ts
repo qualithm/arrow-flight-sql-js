@@ -1,4 +1,4 @@
-import type { FlightInfo, Ticket } from "@qualithm/arrow-flight-js"
+import type { FlightInfo, Ticket } from "@qualithm/arrow-flight"
 import { describe, expect, it, vi } from "vitest"
 
 import type { FlightSqlClient } from "../../client.js"

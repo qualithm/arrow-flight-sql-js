@@ -3,7 +3,7 @@
  *
  * @packageDocumentation
  */
-import { FlightError, type FlightErrorCode } from "@qualithm/arrow-flight-js"
+import { FlightError, type FlightErrorCode } from "@qualithm/arrow-flight"
 
 /**
  * Flight SQL specific error codes.

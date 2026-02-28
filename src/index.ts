@@ -44,4 +44,4 @@ export {
   FlightError,
   type FlightInfo,
   type Ticket
-} from "@qualithm/arrow-flight-js"
+} from "@qualithm/arrow-flight"

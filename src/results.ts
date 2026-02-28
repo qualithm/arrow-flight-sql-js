@@ -8,7 +8,7 @@ import {
   flightDataToIpc,
   type FlightInfo,
   type Ticket
-} from "@qualithm/arrow-flight-js"
+} from "@qualithm/arrow-flight"
 import { tableFromIPC } from "apache-arrow"
 
 import type { FlightSqlClient, QueryOptions } from "./client.js"
@@ -61,7 +61,7 @@ async function collectFlightData(
  *
  * @example
  * ```ts
- * import { queryToTable } from "@qualithm/arrow-flight-sql-js"
+ * import { queryToTable } from "@qualithm/arrow-flight-sql"
  *
  * const table = await queryToTable(client, "SELECT * FROM users LIMIT 100")
  * console.log("Rows:", table.numRows)
